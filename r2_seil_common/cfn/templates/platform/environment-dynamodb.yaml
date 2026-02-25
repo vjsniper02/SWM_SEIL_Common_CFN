@@ -1,0 +1,34 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: This stack contains all the Dynamodb instances used by AWS services
+
+Parameters:
+  EnvPrefix:
+    Type: String
+    Description: Environment Name as Prefix
+
+Resources:
+  MappingDDB:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: "sobj"
+          AttributeType: "S"
+        - AttributeName: "tobj"
+          AttributeType: "S"
+      BillingMode: "PROVISIONED"
+      KeySchema:
+        - AttributeName: "sobj"
+          KeyType: "HASH"
+        - AttributeName: "tobj"
+          KeyType: "RANGE"
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 10
+      SSESpecification:
+        SSEEnabled: true
+      TableClass: "STANDARD"
+      TableName: !Sub '{{resolve:ssm:ProjPrefix}}_${EnvPrefix}_obj_mapping'
+      Tags:
+        - Key: "owner"
+          Value: "swm"

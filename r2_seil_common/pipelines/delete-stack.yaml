@@ -1,0 +1,38 @@
+trigger: none
+pool:
+  vmImage: ubuntu-20.04
+
+parameters:
+  - name: stack
+    displayName: Stack
+    type: string
+  - name: env
+    displayName: Environment
+    type: string
+    values:
+      - dev
+      - apidev
+      - etldev
+      - sit
+      - uat
+
+variables:
+  - name: serviceConnection
+    ${{ if in(parameters.env, 'dev', 'apidev', 'etldev') }}:
+      value: AwsDev
+    ${{ elseif in(parameters.env, 'uat', 'sit') }}:
+      value: AwsNonProd
+    ${{ elseif in(parameters.env, 'prod') }}:
+      value: AwsProd
+  - name: stackName
+    value: ${{ replace(replace(parameters.stack, 'environment', parameters.env), '/', '-') }}
+  - name: region
+    value: ap-southeast-2
+
+steps:
+  - task: CloudFormationDeleteStack@1
+    displayName: Delete Stack
+    inputs:
+      awsCredentials: ${{ variables.serviceConnection }}
+      regionName: ${{ variables.region }}
+      stackName: ${{ variables.stackName }}

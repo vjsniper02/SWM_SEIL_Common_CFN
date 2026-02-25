@@ -1,0 +1,3182 @@
+openapi: "3.0.1"
+info:
+  title:
+    Fn::Sub: ${ProjPrefix}-${ApiName}-${ApiVersion}
+  description: API gateway V2 for forecast, orders and LineItems features.
+  version: 1.0.0
+servers:
+- url:
+    Fn::Sub: "https://${ApiDns}/${ApiVersion}"
+  variables:
+    basePath:
+      default: "v1"
+  description: API dev
+paths:
+  /gam/forecast:
+    post:
+      tags:
+        - Forecast API
+      summary: get availability forecast
+      description: |
+        Gets the availability forecast for a Prospective LineItem. An availability forecast reports the maximum number of available units that the line item can book, and the total number of units matching the line item's targeting.
+      parameters:
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          description: All responses from the service contain an X-Correlation-Id header containing a unique GUID per request. If the request contains an X-Correlation-Id HTTP Header the service will use this value, otherwise it will generate a new correlation id. The correlation id is a GUID in 8-4-4-12 format.
+          schema:
+            type: string
+            example: f8443d84-3cce-4b56-8a8e-328fe77158a7
+        - name: X-Application-Label
+          in: header
+          required: false
+          description: Application label to uniquely identify source system
+          schema:
+            type: string
+            example: salesforce
+      requestBody:
+        description: Availability Forecast request
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AvailabilityForecastRequest'
+      security:
+      - CognitoAuthorizer:
+        - Fn::Sub: ${ProjPrefix}-${EnvPrefix}-oauth-rs/post
+      responses:
+        '200':
+          description: successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailabilityForecastResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse400'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+        '404':
+          description: Not Foound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+        '500':
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse500'
+        default:
+          description: any error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseDefault'
+      x-amazon-apigateway-integration:
+        $ref: '#/components/x-amazon-apigateway-integrations/AlbIntegration'
+  /gam/order:
+    post:
+      tags:
+        - Orders API
+      summary: Create Order
+      description: |
+        create order
+      parameters:
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          description: All responses from the service contain an X-Correlation-Id header containing a unique GUID per request. If the request contains an X-Correlation-Id HTTP Header the service will use this value, otherwise it will generate a new correlation id. The correlation id is a GUID in 8-4-4-12 format.
+          schema:
+            type: string
+        - name: X-Application-Label
+          in: header
+          required: false
+          description: Application label to uniquely identify source system
+          schema:
+            type: string
+      requestBody:
+        description: create order request
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      security:
+      - CognitoAuthorizer:
+        - Fn::Sub: ${ProjPrefix}-${EnvPrefix}-oauth-rs/post
+      responses:
+        '200':
+          description: successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateOrderResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse400'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+        '404':
+          description: Not Foound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+        '500':
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse500'
+        default:
+          description: any error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseDefault'
+      x-amazon-apigateway-integration:
+        $ref: '#/components/x-amazon-apigateway-integrations/AlbIntegration'
+  /gam/order/{orderid}:
+    put:
+      tags:
+        - Orders API
+      summary: Action order
+      description: |
+        perform action on submitted order
+      parameters:
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          description: All responses from the service contain an X-Correlation-Id header containing a unique GUID per request. If the request contains an X-Correlation-Id HTTP Header the service will use this value, otherwise it will generate a new correlation id. The correlation id is a GUID in 8-4-4-12 format.
+          schema:
+            type: string
+        - name: X-Application-Label
+          in: header
+          required: false
+          description: Application label to uniquely identify source system
+          schema:
+            type: string
+        - name: orderid
+          in: path
+          required: true
+          description: Order Id
+          schema:
+            type: number
+        - name: action
+          in: query
+          required: true
+          description: For now only supported value is "APPROVED"
+          schema:
+            type: string
+            enum:
+            - APPROVED
+            - PENDING_APPROVAL
+            - DRAFT
+            - DISAPPROVED
+            - PAUSED
+            - CANCELED
+            - DELETED
+            - UNKNOWN
+        - name: toGam
+          in: query
+          required: true
+          description: For now default route to GAM only
+          example: true
+          schema:
+            type: boolean
+      security:
+      - CognitoAuthorizer:
+        - Fn::Sub: ${ProjPrefix}-${EnvPrefix}-oauth-rs/post
+      responses:
+        '200':
+          description: successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderActionResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+        '404':
+          description: Not Foound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+        '500':
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse500'
+        default:
+          description: any error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseDefault'
+      x-amazon-apigateway-integration:
+        $ref: '#/components/x-amazon-apigateway-integrations/AlbIntegration'
+    get:
+      tags:
+        - Orders API
+      summary: Get orders
+      description: |
+        Get orders by statement
+      parameters:
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          description: All responses from the service contain an X-Correlation-Id header containing a unique GUID per request. If the request contains an X-Correlation-Id HTTP Header the service will use this value, otherwise it will generate a new correlation id. The correlation id is a GUID in 8-4-4-12 format.
+          schema:
+            type: string
+        - name: X-Application-Label
+          in: header
+          required: false
+          description: Application label to uniquely identify source system
+          schema:
+            type: string
+        - name: orderid
+          in: path
+          required: true
+          description: Order Id
+          schema:
+            type: number
+        - name: toGam
+          in: query
+          required: true
+          description: For now default route to GAM only
+          example: true
+          schema:
+            type: boolean
+      security:
+      - CognitoAuthorizer:
+        - Fn::Sub: ${ProjPrefix}-${EnvPrefix}-oauth-rs/post
+      responses:
+        '200':
+          description: successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderActionResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+        '404':
+          description: Not Foound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+        '500':
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse500'
+        default:
+          description: any error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseDefault'
+      x-amazon-apigateway-integration:
+        $ref: '#/components/x-amazon-apigateway-integrations/AlbIntegration'
+  /gam/lineitem:
+    post:
+      tags:
+        - LineItem API
+      summary: Create Line Item
+      description: |
+        create line item on an order
+      parameters:
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          description: All responses from the service contain an X-Correlation-Id header containing a unique GUID per request. If the request contains an X-Correlation-Id HTTP Header the service will use this value, otherwise it will generate a new correlation id. The correlation id is a GUID in 8-4-4-12 format.
+          schema:
+            type: string
+        - name: X-Application-Label
+          in: header
+          required: false
+          description: Application label to uniquely identify source system
+          schema:
+            type: string
+      requestBody:
+        description: create line item request
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLineItemRequest'
+      security:
+      - CognitoAuthorizer:
+        - Fn::Sub: ${ProjPrefix}-${EnvPrefix}-oauth-rs/post
+      responses:
+        '200':
+          description: successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateLineItemResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse400'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+        '404':
+          description: Not Foound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+        '500':
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse500'
+        default:
+          description: any error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseDefault'
+      x-amazon-apigateway-integration:
+        $ref: '#/components/x-amazon-apigateway-integrations/AlbIntegration'
+    put:
+      tags:
+        - LineItem API
+      summary: update an existing line item
+      description: |
+        Update an existing line item
+      parameters:
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          description: All responses from the service contain an X-Correlation-Id header containing a unique GUID per request. If the request contains an X-Correlation-Id HTTP Header the service will use this value, otherwise it will generate a new correlation id. The correlation id is a GUID in 8-4-4-12 format.
+          schema:
+            type: string
+        - name: X-Application-Label
+          in: header
+          required: false
+          description: Application label to uniquely identify source system
+          schema:
+            type: string
+        - name: toGam
+          in: query
+          required: true
+          description: For now default route to GAM only
+          example: true
+          schema:
+            type: boolean
+      requestBody:
+        description: line item to be updated
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LineItemRequest'
+      security:
+      - CognitoAuthorizer:
+        - Fn::Sub: ${ProjPrefix}-${EnvPrefix}-oauth-rs/post
+      responses:
+        '200':
+          description: successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateLineItemResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse400'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+        '404':
+          description: Not Foound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+        '500':
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse500'
+        default:
+          description: any error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseDefault'
+      x-amazon-apigateway-integration:
+        $ref: '#/components/x-amazon-apigateway-integrations/AlbIntegration'
+    get:
+        tags:
+          - LineItem API
+        summary: get line items
+        description: |
+          Get line items by statement
+        parameters:
+          - name: X-Correlation-Id
+            in: header
+            required: false
+            description: All responses from the service contain an X-Correlation-Id header containing a unique GUID per request. If the request contains an X-Correlation-Id HTTP Header the service will use this value, otherwise it will generate a new correlation id. The correlation id is a GUID in 8-4-4-12 format.
+            schema:
+              type: string
+          - name: X-Application-Label
+            in: header
+            required: false
+            description: Application label to uniquely identify source system
+            schema:
+              type: string
+          - name: lineitemid
+            in: query
+            required: false
+            description: Line Item Id. Either a line item ID or an order ID must be provided
+            schema:
+              type: number
+          - name: orderid
+            in: query
+            required: false
+            description: Order Id. Either a line item ID or an order ID must be provided
+            schema:
+              type: number
+          - name: toGam
+            in: query
+            required: true
+            description: For now default route to GAM only
+            example: true
+            schema:
+              type: boolean
+        security:
+        - CognitoAuthorizer:
+          - Fn::Sub: ${ProjPrefix}-${EnvPrefix}-oauth-rs/post
+        responses:
+          '200':
+            description: successful response
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/GetLineItemResponse'
+          '400':
+            description: Bad Request
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ErrorResponse400'
+          '401':
+            description: Unauthorized
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ErrorResponse401'
+          '403':
+            description: Forbidden
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ErrorResponse403'
+          '404':
+            description: Not Foound
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ErrorResponse404'
+          '500':
+            description: Error response
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ErrorResponse500'
+          default:
+            description: any error
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ErrorResponseDefault'
+        x-amazon-apigateway-integration:
+          $ref: '#/components/x-amazon-apigateway-integrations/AlbIntegration'
+  /gam/lineitem/action:
+    put:
+      tags:
+        - LineItem API
+      summary: perform action on a line item
+      description: |
+        Perform action on a line item
+      parameters:
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          description: All responses from the service contain an X-Correlation-Id header containing a unique GUID per request. If the request contains an X-Correlation-Id HTTP Header the service will use this value, otherwise it will generate a new correlation id. The correlation id is a GUID in 8-4-4-12 format.
+          schema:
+            type: string
+        - name: X-Application-Label
+          in: header
+          required: false
+          description: Application label to uniquely identify source system
+          schema:
+            type: string
+        - name: toGam
+          in: query
+          required: true
+          description: For now default route to GAM only
+          example: true
+          schema:
+            type: boolean
+      requestBody:
+        description: perform lineitem action request
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LineItemActionRequest'
+      security:
+      - CognitoAuthorizer:
+        - Fn::Sub: ${ProjPrefix}-${EnvPrefix}-oauth-rs/post
+      responses:
+        '200':
+          description: successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LineItemActionResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse400'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+        '404':
+          description: Not Foound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+        '500':
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse500'
+        default:
+          description: any error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseDefault'
+      x-amazon-apigateway-integration:
+        $ref: '#/components/x-amazon-apigateway-integrations/AlbIntegration'
+  /techone/foreign-exchange-rate/aud-usd:
+    get:
+      tags:
+        - TechOne API
+      summary: Get Foreign Exchange AUD-USD Rate
+      description: |
+        Get Foreign Exchange AUD-USD Rate from Technology One
+      parameters:
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          description: All responses from the service contain an X-Correlation-Id header containing a unique GUID per request. If the request contains an X-Correlation-Id HTTP Header the service will use this value, otherwise it will generate a new correlation id. The correlation id is a GUID in 8-4-4-12 format.
+          schema:
+            type: string
+        - name: X-Application-Label
+          in: header
+          required: false
+          description: Application label to uniquely identify source system
+          schema:
+            type: string
+      security:
+      - CognitoAuthorizer:
+        - Fn::Sub: ${ProjPrefix}-${EnvPrefix}-oauth-rs/post
+      responses:
+        '200':
+          description: successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TechOneFXRateResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse400'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+        '404':
+          description: Not Foound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+        '500':
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse500'
+        default:
+          description: any error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseDefault'
+      x-amazon-apigateway-integration:
+        $ref: '#/components/x-amazon-apigateway-integrations/AlbIntegration'
+  /techone/debtor/{debtor-number}/remaining-credit-limit:
+    get:
+      tags:
+        - TechOne API
+      summary: Get Live Remaining Credit Limit for a given Debtor
+      description: |
+        Get Live Remaining Credit Limit for a given Debtor from Technology One
+      parameters:
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          description: All responses from the service contain an X-Correlation-Id header containing a unique GUID per request. If the request contains an X-Correlation-Id HTTP Header the service will use this value, otherwise it will generate a new correlation id. The correlation id is a GUID in 8-4-4-12 format.
+          schema:
+            type: string
+        - name: X-Application-Label
+          in: header
+          required: false
+          description: Application label to uniquely identify source system
+          schema:
+            type: string
+        - name: debtor-number
+          in: path
+          required: true
+          description: Debtor Number
+          schema:
+            type: string
+      security:
+      - CognitoAuthorizer:
+        - Fn::Sub: ${ProjPrefix}-${EnvPrefix}-oauth-rs/post
+      responses:
+        '200':
+          description: successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TechOneDebtorCreditLimitResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse400'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+        '404':
+          description: Not Foound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+        '500':
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse500'
+        default:
+          description: any error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseDefault'
+      x-amazon-apigateway-integration:
+        $ref: '#/components/x-amazon-apigateway-integrations/AlbIntegration'
+  /gam/proposal:
+    post:
+      tags:
+        - Proposal API
+      summary: Create Proposal
+      description: |
+        Create programmatic guaranteed proposal
+      parameters:
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          description: All responses from the service contain an X-Correlation-Id header containing a unique GUID per request. If the request contains an X-Correlation-Id HTTP Header the service will use this value, otherwise it will generate a new correlation id. The correlation id is a GUID in 8-4-4-12 format.
+          schema:
+            type: string
+        - name: X-Application-Label
+          in: header
+          required: false
+          description: Application label to uniquely identify source system
+          schema:
+            type: string
+      requestBody:
+        description: create proposal request
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProposalRequest'
+      security:
+      - CognitoAuthorizer:
+        - Fn::Sub: ${ProjPrefix}-${EnvPrefix}-oauth-rs/post
+      responses:
+        '200':
+          description: successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateProposalResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse400'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+        '404':
+          description: Not Foound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+        '500':
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse500'
+        default:
+          description: any error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseDefault'
+      x-amazon-apigateway-integration:
+        $ref: '#/components/x-amazon-apigateway-integrations/AlbIntegration'
+  /gam/proposal/{proposalid}:
+    put:
+      tags:
+        - Proposal API
+      summary: Update proposal
+      description: Update the programmatic guaranteed proposal 
+      parameters:
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          description: All responses from the service contain an X-Correlation-Id header containing a unique GUID per request. If the request contains an X-Correlation-Id HTTP Header the service will use this value, otherwise it will generate a new correlation id. The correlation id is a GUID in 8-4-4-12 format.
+          schema:
+            type: string
+        - name: X-Application-Label
+          in: header
+          required: false
+          description: Application label to uniquely identify source system
+          schema:
+            type: string
+        - name: proposalid
+          in: path
+          required: true
+          description: Proposal Id
+          schema:
+            type: number
+        - name: toGam
+          in: query
+          required: true
+          description: For now default route to GAM only
+          example: true
+          schema:
+            type: boolean
+      requestBody:
+        description: update proposal request
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProposalRequest'
+      security:
+      - CognitoAuthorizer:
+        - Fn::Sub: ${ProjPrefix}-${EnvPrefix}-oauth-rs/post
+      responses:
+        '200':
+          description: successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateProposalResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+        '404':
+          description: Not Foound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+        '500':
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse500'
+        default:
+          description: any error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseDefault'
+      x-amazon-apigateway-integration:
+        $ref: '#/components/x-amazon-apigateway-integrations/AlbIntegration'
+    get:
+      tags:
+        - Proposal API
+      summary: Get proposals
+      description: |
+        Get proposals by statement
+      parameters:
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          description: All responses from the service contain an X-Correlation-Id header containing a unique GUID per request. If the request contains an X-Correlation-Id HTTP Header the service will use this value, otherwise it will generate a new correlation id. The correlation id is a GUID in 8-4-4-12 format.
+          schema:
+            type: string
+        - name: X-Application-Label
+          in: header
+          required: false
+          description: Application label to uniquely identify source system
+          schema:
+            type: string
+        - name: proposalid
+          in: path
+          required: true
+          description: Proposal Id
+          schema:
+            type: number
+        - name: toGam
+          in: query
+          required: true
+          description: For now default route to GAM only
+          example: true
+          schema:
+            type: boolean
+      security:
+      - CognitoAuthorizer:
+        - Fn::Sub: ${ProjPrefix}-${EnvPrefix}-oauth-rs/post
+      responses:
+        '200':
+          description: successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetProposalsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+        '404':
+          description: Not Foound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+        '500':
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse500'
+        default:
+          description: any error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseDefault'
+      x-amazon-apigateway-integration:
+        $ref: '#/components/x-amazon-apigateway-integrations/AlbIntegration'
+  /gam/proposallineitem:
+    post:
+      tags:
+      - ProposalLineItem API
+      summary: Creates new ProposalLineItem objects
+      description: Creates new ProposalLineItem objects
+      parameters:
+      - name: X-Correlation-Id
+        in: header
+        description: "All responses from the service contain an X-Correlation-Id header\
+          \ containing a unique GUID per request. If the request contains an X-Correlation-Id\
+          \ HTTP Header the service will use this value, otherwise it will generate\
+          \ a new correlation id. The correlation id is a GUID in 8-4-4-12 format."
+        required: false
+        style: simple
+        explode: false
+        schema:
+          type: string
+      - name: X-Application-Label
+        in: header
+        description: Application label to uniquely identify source system
+        required: false
+        style: simple
+        explode: false
+        schema:
+          type: string
+      requestBody:
+        description: create line item request
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProposalLineItemRequest'
+        required: true
+      responses:
+        "200":
+          description: successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateUpdateProposalLineItemResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse400'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+        "404":
+          description: Not Foound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+        "500":
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse500'
+        default:
+          description: any error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseDefault'
+      security:
+      - CognitoAuthorizer:
+        - Fn::Sub: ${ProjPrefix}-${EnvPrefix}-oauth-rs/post
+      x-amazon-apigateway-integration:
+        $ref: '#/components/x-amazon-apigateway-integrations/AlbIntegration'
+    put:
+      tags:
+      - ProposalLineItem API
+      summary: Creates new ProposalLineItem objects
+      description: Creates new ProposalLineItem objects
+      parameters:
+      - name: X-Correlation-Id
+        in: header
+        description: "All responses from the service contain an X-Correlation-Id header\
+          \ containing a unique GUID per request. If the request contains an X-Correlation-Id\
+          \ HTTP Header the service will use this value, otherwise it will generate\
+          \ a new correlation id. The correlation id is a GUID in 8-4-4-12 format."
+        required: false
+        style: simple
+        explode: false
+        schema:
+          type: string
+      - name: X-Application-Label
+        in: header
+        description: Application label to uniquely identify source system
+        required: false
+        style: simple
+        explode: false
+        schema:
+          type: string
+      requestBody:
+        description: create line item request
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProposalLineItemRequest'
+        required: true
+      responses:
+        "200":
+          description: successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateUpdateProposalLineItemResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse400'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+        "404":
+          description: Not Foound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+        "500":
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse500'
+        default:
+          description: any error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseDefault'
+      security:
+      - CognitoAuthorizer:
+        - Fn::Sub: ${ProjPrefix}-${EnvPrefix}-oauth-rs/post
+      x-amazon-apigateway-integration:
+        $ref: '#/components/x-amazon-apigateway-integrations/AlbIntegration'
+  /gam/proposallineitem/{proposalid}:
+    get:
+      tags:
+        - Proposal LineItem API
+      summary: Get proposal Lineitems
+      description: |
+        Get proposal lineItems by statement
+      parameters:
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          description: All responses from the service contain an X-Correlation-Id header containing a unique GUID per request. If the request contains an X-Correlation-Id HTTP Header the service will use this value, otherwise it will generate a new correlation id. The correlation id is a GUID in 8-4-4-12 format.
+          schema:
+            type: string
+        - name: X-Application-Label
+          in: header
+          required: false
+          description: Application label to uniquely identify source system
+          schema:
+            type: string
+        - name: proposalid
+          in: path
+          required: true
+          description: Proposal Id
+          schema:
+            type: number
+        - name: toGam
+          in: query
+          required: true
+          description: For now default route to GAM only
+          example: true
+          schema:
+            type: boolean
+      security:
+      - CognitoAuthorizer:
+        - Fn::Sub: ${ProjPrefix}-${EnvPrefix}-oauth-rs/post
+      responses:
+        '200':
+          description: successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetProposalLineitemResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+        '404':
+          description: Not Foound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+        '500':
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse500'
+        default:
+          description: any error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseDefault'
+      x-amazon-apigateway-integration:
+        $ref: '#/components/x-amazon-apigateway-integrations/AlbIntegration'
+components:
+  x-amazon-apigateway-integrations:
+    AlbIntegration:
+      type: HTTP_PROXY
+      httpMethod: ANY
+      connectionId:
+        Fn::Sub: ${VpcLink}
+      connectionType: VPC_LINK
+      tlsConfig:
+        serverNameToVerify:
+          Fn::Sub: "${EnvPrefix}-api.{{resolve:ssm:/networking/route53/zonename}}"
+      uri:
+        Fn::Sub: ${AlbListener}
+      payloadFormatVersion: 1.0
+  securitySchemes:
+    CognitoAuthorizer:
+      type: "apiKey"
+      name: "Authorization"
+      in: "header"
+      x-amazon-apigateway-authtype: "cognito_user_pools"
+      x-amazon-apigateway-authorizer:
+        providerARNs:
+        - Fn::Sub: arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPool}
+        type: "jwt"
+        jwtConfiguration:
+          audience:
+          - Fn::Sub: ${UserPoolClient}
+          issuer:
+            Fn::Sub: https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}
+        identitySource: $request.header.Authorization
+  schemas:
+    ServiceResponse:
+      type: object
+      properties:
+        applicationLabel:
+          type: string
+          description: api consumer name mapped from request header parameter
+          example: salesforce
+        time:
+          type: string
+          format: date-time
+          description: response time sent by api/microservice
+          example: '2021-10-04T10:54:24.792+1000'
+        correlationId:
+          type: string
+          description: correlation id sent in request from header
+          example: f8443d84-3cce-4b56-8a8e-328fe77158a7
+    ErrorResponse400:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: Mandatory, http code
+          example: 400
+        message:
+          type: string
+          description: Optional. failure/exception short message
+          example: Bad Request
+        status:
+          type: string
+          description: Optional. application error code in case of successful response.
+          example: 400301
+        errors:
+          type: array
+          description: Optional.
+          items:
+            $ref: '#/components/schemas/ReservationDetailsError'
+    ErrorResponse500:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: Mandatory, http code
+          example: 500
+        message:
+          type: string
+          description: Optional. failure/exception short message
+          example: Internal server error
+        status:
+          type: string
+          description: Optional. application error code in case of successful response.
+          example: EC001
+        errors:
+          type: array
+          description: Optional.
+          items:
+            $ref: '#/components/schemas/ErrorsObject'
+    ErrorsObject:
+      type: object
+      properties:
+        code:
+          type: string
+          example: "DS501"
+        message:
+          type: string
+          example: Downstream not available
+    ReservationDetailsError:
+      type: object
+      properties:
+        code:
+          $ref: '#/components/schemas/ReservationDetailsErrorReason'
+        message:
+          type: string
+          example: TBD
+    ErrorResponse404:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: http code
+          example: 404
+        message:
+          type: string
+          description: Optional.
+          example: Not Found
+        status:
+          type: string
+          description: Optional.
+          example: 404000
+    ErrorResponse401:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Unauthorised
+    ErrorResponse403:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Forbidden
+    ErrorResponseDefault:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+          description: Mandatory. Http Code
+          example: 500
+        message:
+          type: string
+          example: Internal server error
+    AvailabilityForecastRequest:
+      type: object
+      properties:
+        lineItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProspectiveLineItem'
+          description: the prospective line item (new or existing) to be forecasted for availability
+        # forecastOptions:
+        #   type: object
+        #   description: options controlling the forecast
+    AvailabilityForecastResponse:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: http code
+          example: 200
+        message:
+          type: string
+          description: Optional.
+          example: success
+        status:
+          type: string
+          description: Optional.
+          example: 200000
+        data:
+          $ref: '#/components/schemas/lineItemsResponse'
+    lineItemsResponse:
+      type: object
+      properties:
+        lineItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/AvailabilityForecast'
+          description: list of line items
+    CreateProposalLineItemRequest:
+      type: object
+      properties:
+        proposalLineItems:
+          type: array
+          description: "Mandatory, line item to create on an order"
+          items:
+            $ref: '#/components/schemas/ProposalLineItem'
+    UpdateProposalLineItemRequest:
+      type: object
+      properties:
+        proposalLineItems:
+          type: array
+          description: "Mandatory, line item to update on an order"
+          items:
+            $ref: '#/components/schemas/ProposalLineItem'
+    CreateUpdateProposalLineItemResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/CreateUpdateProposalLineItemResponse_data'
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+    AvailabilityForecast:
+      type: object
+      properties:
+        lineItemId:
+          type: number
+          description: Uniquely identifies this availability forecast. This value is read-only and is assigned by Google when the forecast is created. The attribute will be either the ID of the LineItem object it represents, or null if the forecast represents a prospective line item.
+          example: 1234
+        orderId:
+          type: number
+          description: The unique ID for the Order object that this line item belongs to, or null if the forecast represents a prospective line item without an LineItem.orderId set.
+          example: 1234
+        unitType:
+          description: The unit with which the goal or cap of the LineItem is defined. Will be the same value as Goal.unitType for both a set line item or a prospective one.
+          allOf:
+          - $ref: '#/components/schemas/UnitType'
+          example: IMPRESSIONS
+        availableUnits:
+          type: number
+          description: The number of units
+          example: -30
+        deliveredUnits:
+          type: number
+          description: The number of units
+          example: 600000
+        matchedUnits:
+          type: number
+          description: The number of units
+          example: 120
+        possibleUnits:
+          type: number
+          description: The number of units
+          example: 40
+        reservedUnits:
+          type: number
+          description: The number of units
+          example: 20
+    ProspectiveLineItem:
+      description: Represents a prospective line item to be forecasted.
+      type: object
+      properties:
+        lineItem:
+          $ref: '#/components/schemas/LineItem'
+        # proposalLineItem:
+        #   type: object
+        #   description: Optional, reserved for future. The target of the forecast if this prospective line item is a proposal line item.
+        # advertiserId:
+        #   type: number
+        #   description: Optional, When set, the line item is assumed to be from this advertiser, and unified blocking rules will apply accordingly. If absent, line items without an existing order won't be subject to unified blocking rules.
+        rules:
+          type: object
+          description: Mandatory, rules to process this transaction
+          allOf:
+          - $ref: '#/components/schemas/Rules'
+    LineItem:
+      description: LineItem is an advertiser's commitment to purchase a specific number of ad impressions, clicks, or time.
+      type: object
+      properties:
+        targeting:
+          $ref: '#/components/schemas/Targeting'
+      allOf:
+      - $ref: '#/components/schemas/LineItemSummary'
+      ##LineItemSummary modified##
+    LineItemSummary:
+      type: object
+      description: LineItem is an advertiser's commitment to purchase a specific number of ad impressions, clicks, or time.
+      properties:
+        orderId:
+          type: number
+          description: Optional, The ID of the Order to which the LineItem belongs.
+          example: 1234
+        name:
+          type: string
+          description: Mandatory, The name of the line item.
+          example: Print Banner
+        startDateTime:
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+          description: Mandatory, The date and time on which the LineItem is enabled to begin serving. This attribute is required and must be in the future.
+        startDateTimeType:
+          type: string
+          enum:
+          - USE_START_DATE_TIME
+          - IMMEDIATELY
+          - ONE_HOUR_FROM_NOW
+          - UNKNOWN
+          description: Optional, Specifies whether to start serving to the LineItem right away, in an hour, etc.
+          example: 'USE_START_DATE_TIME'
+        #endDateTime:
+          #description: The date and time on which the LineItem will stop serving. This attribute is required unless LineItem.unlimitedEndDateTime is set to true. If specified, it must be after the LineItem.startDateTime. This end date and time does not include auto extension days.
+          #$ref: '#/components/schemas/DateTime'
+        unlimitedEndDateTime:
+          type: boolean
+          description: Specifies whether or not the LineItem has an end time. This attribute is optional and defaults to false.
+          example: false
+        lineItemType:
+          allOf:
+            - $ref: '#/components/schemas/LineItemType'
+          description: Mandatory, Indicates the line item type of a LineItem. This attribute is required. The line item type determines the default priority of the line item.
+          example: 'STANDARD'
+        costPerUnit:
+          $ref: '#/components/schemas/Money'
+        costType:
+          type: string
+          description: Mandatory, The method used for billing this LineItem. This attribute is required.
+          enum:
+          - CPA
+          - CPC
+          - CPD
+          - CPM
+          - VCPM
+          - CPM_IN_TARGET
+          - UNKNOWN
+          example: CPC
+        creativePlaceholders:
+          type: array
+          description: Mandatory, Details about the creatives that are expected to serve through this LineItem. This attribute is required and replaces the creativeSizes attribute.
+          items:
+            $ref: '#/components/schemas/CreativePlaceholder'
+        primaryGoal:
+          $ref: '#/components/schemas/Goal'
+    ##CreativePlaceholder Edited##
+    Size:
+      type: object
+      description: Represents the dimensions of an AdUnit, LineItem or Creative.
+      properties:
+        width:
+          type: integer
+          description: The width of the LineItem
+          example: 100
+        height:
+          type: integer
+          description: The height of the LineItem
+          example: 100
+        # isAspectRatio:
+        #   type: boolean
+        #   description: Whether this size represents an aspect ratio.
+        #   example: true
+    Goal:
+      type: object
+      description: Defines the criteria a LineItem needs to satisfy to meet its delivery goal.
+      properties:
+        goalType:
+          description: The type of the goal for the LineItem. It defines the period over which the goal for LineItem should be reached.
+          allOf:
+          - $ref: '#/components/schemas/GoalType'
+        unitType:
+          description: The type of the goal unit for the LineItem.
+          allOf:
+          - $ref: '#/components/schemas/UnitType'
+        units:
+          type: number
+          description: If this is a primary goal, it represents the number or percentage of impressions or clicks that will be reserved for the LineItem.
+          example: 20
+    GoalType:
+      type: string
+      enum:
+        - NONE
+        - LIFETIME
+        - DAILY
+        - UNKNOWN
+      example: DAILY
+    UnitType:
+      type: string
+      enum:
+        - IMPRESSIONS
+        - CLICKS
+        - CLICK_THROUGH_CPA_CONVERSIONS
+        - VIEW_THROUGH_CPA_CONVERSIONS
+        - TOTAL_CPA_CONVERSIONS
+        - VIEWABLE_IMPRESSIONS
+        - IN_TARGET_IMPRESSIONS
+        - UNKNOWN
+      example: IMPRESSIONS
+    Targeting:
+      type: object
+      description: Contains targeting criteria for LineItem objects.
+      properties:
+        geoTargeting:
+          description: Optional, Specifies what geographical locations are targeted by the LineItem. This attribute is optional.
+          allOf:
+            - $ref: '#/components/schemas/GeoTargeting'
+        inventoryTargeting:
+          description: Mandatory, Specifies what inventory is targeted by the LineItem. This attribute is required. The line item must target at least one ad unit or placement.
+          allOf:
+            - $ref: '#/components/schemas/InventoryTargeting'
+    GeoTargeting:
+      type: object
+      description: Provides line items the ability to target geographical locations.
+      properties:
+        targetedLocations:
+          description: The geographical locations being targeted by the LineItem.
+          type: array
+          items:
+            $ref: '#/components/schemas/Location'
+        excludedLocations:
+          description: The geographical locations being excluded by the LineItem.
+          type: array
+          items:
+            $ref: '#/components/schemas/Location'
+    Location:
+      type: object
+      description: A Location represents a geographical entity that can be targeted.
+      properties:
+        id:
+          description: Uniquely identifies each Location.
+          type: number
+          example: 1234
+    InventoryTargeting:
+      type: object
+      description: A collection of targeted and excluded ad units and placements.
+      properties:
+        targetedAdUnits:
+          description: A list of targeted AdUnitTargeting.
+          type: array
+          items:
+            $ref: '#/components/schemas/AdUnitTargeting'
+        excludedAdUnits:
+          description: A list of excluded AdUnitTargeting.
+          type: array
+          items:
+            $ref: '#/components/schemas/AdUnitTargeting'
+        targetedPlacementIds:
+          type: array
+          description: A list of targeted Placement ids.
+          items:
+            type: number
+    AdUnitTargeting:
+      type: object
+      description: Represents targeted or excluded ad units.
+      properties:
+        adUnitId:
+          description: Included or excluded ad unit id.
+          type: string
+          example: 22223488449
+        includeDescendants:
+          type: boolean
+          description: Whether or not all descendants are included (or excluded) as part of including (or excluding) this ad unit. By default, the value is true which means targeting this ad unit will target all of its descendants.
+          example: true
+    DateTime:
+      type: object
+      description: Represents a date combined with the time of day.
+      properties:
+        date:
+          $ref: '#/components/schemas/Date'
+        hour:
+          type: integer
+          example: 0
+        minute:
+          type: integer
+          example: 0
+        second:
+          type: integer
+          example: 0
+        timeZoneId:
+          type: string
+          example: America/Los_Angeles
+    Date:
+      type: object
+      description: Represents a date.
+      properties:
+        year:
+          type: integer
+          description: Year (e.g., 2009)
+          example: 2022
+        month:
+          type: integer
+          description: Month (1..12)
+          example: 2
+        day:
+          type: integer
+          description: Day (1..31)
+          example: 15
+    ReservationDetailsErrorReason:
+      type: string
+      description: The reasons for the target error.
+      enum:
+      - UNLIMITED_UNITS_BOUGHT_NOT_ALLOWED
+      - UNLIMITED_END_DATE_TIME_NOT_ALLOWED
+      - PERCENTAGE_UNITS_BOUGHT_TOO_HIGH
+      - DURATION_NOT_ALLOWED
+      - UNIT_TYPE_NOT_ALLOWED
+      - COST_TYPE_NOT_ALLOWED
+      - COST_TYPE_UNIT_TYPE_MISMATCH_NOT_ALLOWED
+      - LINE_ITEM_TYPE_NOT_ALLOWED
+      - NETWORK_REMNANT_ORDER_CANNOT_UPDATE_LINEITEM_TYPE
+      - BACKFILL_WEBPROPERTY_CODE_NOT_ALLOWED
+      - UNKNOWN
+      example: UNLIMITED_UNITS_BOUGHT_NOT_ALLOWED
+    LineItemType:
+      type: string
+      description: LineItemType indicates the priority of a LineItem, determined by the way in which impressions are reserved to be served for it.
+      enum:
+        - SPONSORSHIP
+        - STANDARD
+        - NETWORK
+        - BULK
+        - PRICE_PRIORITY
+        - HOUSE
+        - LEGACY_DFP
+        - CLICK_TRACKING
+        - ADSENSE
+        - AD_EXCHANGE
+        - BUMPER
+        - ADMOB
+        - PREFERRED_DEAL
+        - UNKNOWN
+    Rules:
+      type: object
+      description: Rules for processing transaction
+      properties:
+        route:
+          type: object
+          description: route config
+          allOf:
+          - $ref: '#/components/schemas/Route'
+    Route:
+      type: object
+      description: route rules as binary config
+      properties:
+        toGam:
+          type: boolean
+          description: should be true if it need to be delivered to GAM
+    CreateOrderRequest:
+      type: object
+      properties:
+        orders:
+          type: array
+          description: Mandatory, the orders to create. only one element expected at this stage
+          items:
+            $ref: '#/components/schemas/OrderRequest'
+    CreateOrderResponse:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: http code
+          example: 200
+        message:
+          type: string
+          description: Optional.
+          example: success
+        status:
+          type: string
+          description: Optional.
+          example: 200000
+        data:
+          $ref: '#/components/schemas/OrdersResponse'
+    OrderRequest:
+      type: object
+      description: An Order represents a grouping of individual LineItem objects, each of which fulfill an ad request from a particular advertiser.
+      properties:
+        name:
+          type: string
+          description: Mandatory, The name of the Order. This value is required to create an order.
+          example: TOrder111
+        startDateTime:
+          description: The date and time at which the Order and its associated line items are eligible to begin serving.
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+        status:
+          description: Mandatory, The status of the Order.
+          allOf:
+            - $ref: '#/components/schemas/OrderStatus'
+          example: 'DRAFT'
+        notes:
+          type: string
+          description: Optional, Provides any additional notes that may annotate the Order.
+        externalOrderId:
+          type: integer
+          description: Optional, An arbitrary ID to associate to the Order, which can be used as a key to an external system. This value is optional.
+          example: 1234
+        poNumber:
+          type: string
+          description: Optional, The purchase order number for the Order.
+          example: tbd
+        currencyCode:
+          type: string
+          description: The ISO currency code for the currency used by the Order. This value is read-only and is the network's currency code.
+          example: AUD
+        advertiserId:
+          type: number
+          description: Mandatory, The unique ID of the ADVERTISER, to which this order belongs.
+          example: 4993725282
+        creatorId:
+          type: number
+          description: The unique ID of the User who created the Order on behalf of the advertiser. This value is present only on response.
+          example: 246579220
+        traffickerId:
+          type: number
+          description: Mandatory, The unique ID of the User responsible for trafficking the Order.
+          example: 246560853
+        salespersonId:
+          type: number
+          description: Optional, The unique ID of the User responsible for the sales of the Order.
+          example: tbd
+        totalBudget:
+          $ref: '#/components/schemas/MoneyModel'
+        appliedTeamIds:
+          type: array
+          items:
+            type: number
+          description: The IDs of all teams that this order is on directly.
+          example: [1234, 1234]
+        rules:
+          type: object
+          description: Mandatory, rules to process this transaction
+          allOf:
+          - $ref: '#/components/schemas/Rules'
+    OrdersResponse:
+      type: object
+      properties:
+        orders:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderResponseData'
+          description: list of line items
+    OrderResponseData:
+      type: object
+      properties:
+        id:
+          type: number
+          description: The unique ID of the Order. This value is readonly
+          example: 2827386930
+        name:
+          type: string
+          description: Mandatory, The name of the Order. This value is required to create an order.
+          example: TOrder111
+        status:
+          description: Mandatory, The status of the Order.
+          allOf:
+            - $ref: '#/components/schemas/OrderStatus'
+          example: 'DRAFT'
+    OrderActionResponse:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: http code
+          example: 200
+        message:
+          type: string
+          description: Optional.
+          example: success
+        status:
+          type: string
+          description: Optional.
+          example: 200000
+        data:
+          $ref: '#/components/schemas/OrderResponseData'
+    OrderStatus:
+      type: string
+      description: Describes the order statuses.
+      enum:
+        - DRAFT
+        - PENDING_APPROVAL
+        - APPROVED
+        - DISAPPROVED
+        - PAUSED
+        - CANCELED
+        - DELETED
+        - UNKNOWN
+    MoneyModel:
+      type: object
+      description: Total budget for all line items of this Order. This value is present only on response.
+      properties:
+        currencyCode:
+          type: string
+          description: Three letter currency code in string format.
+          example: AUD
+        microAmount:
+          type: number
+          description: Money values are always specified in terms of micros which are a millionth of the fundamental currency unit. For US dollars, $1 is 1,000,000 micros.
+          example: 1000000
+    CreateLineItemRequest:
+      type: object
+      properties:
+        lineItems:
+          type: array
+          description: Mandatory, line items to create on an order
+          items:
+            $ref: '#/components/schemas/LineItemRequest'
+    CreateLineItemResponse:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: http code
+          example: 200
+        message:
+          type: string
+          description: Optional.
+          example: success
+        status:
+          type: string
+          description: Optional.
+          example: 200000
+        data:
+          $ref: '#/components/schemas/LineItemResponses'
+    GetLineItemResponse:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: http code
+          example: 200
+        message:
+          type: string
+          description: Optional.
+          example: success
+        status:
+          type: string
+          description: Optional.
+          example: 200000
+        data:
+          $ref: '#/components/schemas/LineItemResponses'
+    LineItemRequest:
+      description: LineItem is an advertiser's commitment to purchase a specific number of ad impressions, clicks, or time.
+      allOf:
+        - $ref: '#/components/schemas/LineItemSummaryRequest'
+      type: object
+      properties:
+        targeting:
+          $ref: '#/components/schemas/TargetingRequest'
+        rules:
+          type: object
+          description: Mandatory, rules to process this transaction
+          allOf:
+          - $ref: '#/components/schemas/Rules'
+    LineItemResponses:
+      type: object
+      properties:
+        lineItems:
+          type: array
+          description: list of line items responses
+          items:
+            $ref: '#/components/schemas/LineItemResponseData'
+    LineItemSummaryRequest:
+      type: object
+      description: LineItem is an advertiser's commitment to purchase a specific number of ad impressions, clicks, or time.
+      properties:
+        orderId:
+          type: number
+          description: Mandatory, The ID of the Order to which the LineItem belongs.
+          example: 2827917054
+        id:
+          type: number
+          description: Optional, The ID of the LineItem.
+          example: 1234
+        name:
+          type: string
+          description: Mandatory, The name of the line item.
+          example: tbd
+        startDateTime:
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+          description: Mandatory, The date and time on which the LineItem is enabled to begin serving. This attribute is required and must be in the future.
+        unlimitedEndDateTime:
+          type: boolean
+          description: Specifies whether or not the LineItem has an end time. This attribute is optional and defaults to false.
+          example: true
+        lineItemType:
+          description: Mandatory, Indicates the line item type of a LineItem. This attribute is required. The line item type determines the default priority of the line item.
+          allOf:
+            - $ref: '#/components/schemas/LineItemType'
+          example: 'STANDARD'
+        costPerUnit:
+          description: The amount of money to spend per impression or click. This attribute is required for creating a LineItem.
+          allOf:
+          - $ref: '#/components/schemas/Money'
+        creativePlaceholders:
+          type: array
+          description: Mandatory, Details about the creatives that are expected to serve through this LineItem. This attribute is required and replaces the creativeSizes attribute.
+          items:
+            $ref: '#/components/schemas/CreativePlaceholderRequest'
+        primaryGoal:
+          description: The primary goal that this LineItem is associated with, which is used in its pacing and budgeting.
+          allOf:
+            - $ref: '#/components/schemas/Goal'
+    TargetingRequest:
+      type: object
+      description: Contains targeting criteria for LineItem objects.
+      properties:
+        geoTargeting:
+          description: Optional, Specifies what geographical locations are targeted by the LineItem. This attribute is optional.
+          allOf:
+            - $ref: '#/components/schemas/GeoTargetingRequest'
+        inventoryTargeting:
+          description: Mandatory, Specifies what inventory is targeted by the LineItem. This attribute is required. The line item must target at least one ad unit or placement.
+          allOf:
+            - $ref: '#/components/schemas/InventoryTargetingRequest'
+    LineItemResponseData:
+      type: object
+      properties:
+        id:
+          type: number
+          description: The unique ID of the Line Item. This value is readonly
+          example: 2827386930
+        name:
+          type: string
+          description: The name of the Line Item. This value is readonly
+          example: lineitemname
+        status:
+          description: Mandatory, The status of the Line Item.
+          allOf:
+            - $ref: '#/components/schemas/LineItemStatus'
+          example: 'DRAFT'
+    LineItemStatus:
+      type: string
+      description: Describes the line item status.
+      enum:
+        - DELIVERY_EXTENDED
+        - DELIVERING 
+        - READY
+        - PAUSED
+        - INACTIVE
+        - PAUSED_INVENTORY_RELEASED 
+        - PENDING_APPROVAL
+        - COMPLETED
+        - DISAPPROVED
+        - DRAFT
+        - CANCELED
+    CreativePlaceholderRequest:
+      type: object
+      description: A CreativePlaceholder describes a slot that a creative is expected to fill. This is used primarily to help in forecasting, and also to validate that the correct creatives are associated with the line item. A CreativePlaceholder must contain a size, and it can optionally contain companions. Companions are only valid if the line item's environment type is EnvironmentType.VIDEO_PLAYER.
+      properties:
+        size:
+          $ref: '#/components/schemas/Size'
+        isAmpOnly:
+          type: boolean
+          description: Optional, Indicate if the expected creative of this placeholder has an AMP only variant. This attribute is optional. It is for forecasting purposes only and has no effect on serving.
+          example: false
+    GeoTargetingRequest:
+      type: object
+      description: Provides line items the ability to target geographical locations.
+      properties:
+        targetedLocations:
+          description: The geographical locations being targeted by the LineItem.
+          type: array
+          items:
+            $ref: '#/components/schemas/LocationRequest'
+    InventoryTargetingRequest:
+      type: object
+      description: A collection of targeted and excluded ad units and placements.
+      properties:
+        targetedAdUnits:
+          description: A list of targeted AdUnitTargeting.
+          type: array
+          items:
+            $ref: '#/components/schemas/AdUnitTargeting'
+    LocationRequest:
+      type: object
+      description: A Location represents a geographical entity that can be targeted.
+      properties:
+        id:
+          description: Uniquely identifies each Location.
+          type: number
+          example: 1234
+        type:
+          description: The location type for this geographical entity
+          type: string
+          example: COUNTRY
+        displayName:
+          description: The localized name of the geographical entity.
+          type: string
+          example: AUSTRALIA
+    LineItemActionRequest:
+      type: object
+      properties:
+        ids:
+          type: array
+          description: Line item IDs
+          example: [1234, 2345]
+          items:
+            type: number
+        action:
+          type: string
+          description: The action to perform on all line items
+          enum:
+            - activate
+            - archive
+            - delete
+            - pause
+            - release
+            - reserve
+            - resume
+    LineItemActionResponse:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: http code
+          example: 200
+        message:
+          type: string
+          description: Optional.
+          example: success
+        status:
+          type: string
+          description: Optional.
+          example: 200000
+        data:
+          $ref: '#/components/schemas/LineItemActionResponseData'
+    LineItemActionResponseData:
+      type: object
+      properties:
+        numChanges:
+          type: integer
+          description: The number of objects that were changed as a result of performing the action.
+          example: 1
+    TechOneFXRateData:
+      type: object
+      properties:
+        major_ccy_code:
+          type: string
+          description: Major Currency Code
+          example: 'AUD'
+        trans_ccy_code:
+          type: string
+          description: Transfer Currency Code
+          example: 'USD'
+        end_datei:
+          type: string
+          format: date-time
+          description: End Date
+          example: '2021-12-13'
+        exch_rate_amt:
+          type: number
+          description: Exchange Rate
+          example: 0.717526
+        start_datei:
+          type: string
+          format: date-time
+          description: Start Date
+          example: '2021-12-13'
+    TechOneFXRateResponse:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: http code
+          example: 200
+        message:
+          type: string
+          description: Optional.
+          example: success
+        status:
+          type: string
+          description: Optional.
+          example: 200000
+        data:
+          $ref: '#/components/schemas/TechOneFXRateData'
+    TechOneDebtorCreditLimitData:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Message Code from TechOne
+          example: 'BPPR0140'
+        remaining_credit_limit:
+          type: number
+          description: Debtor Remaining Credit Limit
+          example: 1597.14
+        notification_type:
+          type: string
+          description: Notification Type from TechOne
+          example: 'Information'
+    TechOneDebtorCreditLimitResponse:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: http code
+          example: 200
+        message:
+          type: string
+          description: Optional.
+          example: success
+        status:
+          type: string
+          description: Optional.
+          example: 200000
+        data:
+          $ref: '#/components/schemas/TechOneDebtorCreditLimitData'
+    CreateProposalRequest:
+      type: object
+      properties:
+        orders:
+          type: array
+          description: Mandatory, the proposal to create. only one element expected at this stage
+          items:
+            $ref: '#/components/schemas/ProposalRequest'
+    CreateProposalResponse:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: http code
+          example: 200
+        message:
+          type: string
+          description: Optional.
+          example: success
+        status:
+          type: string
+          description: Optional.
+          example: 200000
+        data:
+          $ref: '#/components/schemas/ProposalResponse'
+    UpdateProposalRequest:
+      type: object
+      properties:
+        orders:
+          type: array
+          description: Mandatory, the proposal to update. only one element expected at this stage
+          items:
+            $ref: '#/components/schemas/ProposalRequest'
+    UpdateProposalResponse:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: http code
+          example: 200
+        message:
+          type: string
+          description: Optional.
+          example: success
+        status:
+          type: string
+          description: Optional.
+          example: 200000
+        data:
+          $ref: '#/components/schemas/ProposalResponseData'
+    GetProposalsResponse:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: http code
+          example: 200
+        message:
+          type: string
+          description: Optional.
+          example: success
+        status:
+          type: string
+          description: Optional.
+          example: 200000
+        data:
+          $ref: '#/components/schemas/ProposalResponseData'
+    GetProposalLineitemResponse:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: http code
+          example: 200
+        message:
+          type: string
+          description: Optional.
+          example: success
+        status:
+          type: string
+          description: Optional.
+          example: 200000
+        data:
+          $ref: '#/components/schemas/ProposalLineItem'
+    ProposalRequest:
+      type: object
+      description: An Proposal represents a grouping of individual LineItem objects, each of which fulfill an ad request from a particular advertiser.
+      properties:
+        name:
+          type: string
+          description: Mandatory, The name of the Proposal. This value is required to create an proposal.
+          example: TOrder111
+        startDateTime:
+          description: The date and time at which the order and line items associated with the Proposal are eligible to begin serving.
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+        endDateTime:
+          description: The date and time at which the order and line items associated with the Proposal stop being served.
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+        advertiser:
+          description: The advertiser, to which this Proposal belongs, and a set of Contact objects associated with the advertiser.
+          allOf:
+            - $ref: '#/components/schemas/ProposalCompanyAssociation'
+        agencies:
+          type: array
+          items:
+            allOf:
+            - $ref: '#/components/schemas/ProposalCompanyAssociation'
+          description: The advertiser, to which this Proposal belongs, and a set of Contact objects associated with the advertiser.
+        internalNotes:
+          type: string
+          description: Optional, Provides any additional notes that may annotate the Proposal.
+        primarySalesperson:
+          description: The primary salesperson who brokered the transaction with the advertiser.
+          allOf:
+            - $ref: '#/components/schemas/SalespersonSplit'
+        salesPlannerIds:
+          type: array
+          items:
+            allOf:
+            - $ref: '#/components/schemas/SalespersonSplit'
+          description: List of unique IDs of User objects who are the sales planners of the Proposal.
+        primaryTraffickerId:
+          type: integer
+          description: The unique ID of the User who is primary trafficker and is responsible for trafficking the Proposal.
+        sellerContactIds:
+          type: array
+          items:
+            type: integer
+          description: users who are the seller's contacts.
+        appliedTeamIds:
+          type: array
+          items:
+            type: integer
+          description: The IDs of all teams that the Proposal is on directly.
+        appliedLabels:
+          type: array
+          items:
+            allOf:
+            - $ref: '#/components/schemas/AppliedLabel'
+          description: The set of labels applied directly to the Proposal. This attribute is optional.
+        effectiveAppliedLabels:
+          type: array
+          items:
+            allOf:
+            - $ref: '#/components/schemas/AppliedLabel'
+          description: Contains the set of labels applied directly to the proposal as well as those inherited ones.
+        currencyCode:
+          type: string
+          description: The currency code of this Proposal. This attribute is optional and defaults to network's currency code.
+          example: AUD
+        marketplaceInfo:
+          description: The marketplace info of this proposal if it has a corresponding order in Marketplace.
+          allOf:
+            - $ref: '#/components/schemas/ProposalMarketplaceInfo'
+        buyerRfp:
+          description: The buyer RFP associated with this Proposal, which is optional. This field will be null if the proposal is not initiated from RFP.
+          allOf:
+            - $ref: '#/components/schemas/BuyerRfp'
+        hasBuyerRfp:
+          type: boolean
+          description: Whether a Proposal contains a BuyerRfp field. If this field is true, it indicates that the Proposal in question orignated from a buyer.
+        deliveryPausingEnabled:
+          type: boolean
+          description: Whether pausing is consented for the Proposal. This field is optional and defaults to true.
+    ProposalResponse:
+      type: object
+      properties:
+        orders:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProposalResponseData'
+          description: list of Proposals
+    ProposalResponseData:
+      type: object
+      properties:properties:
+        name:
+          type: string
+          description: Mandatory, The name of the Proposal. This value is required to create an proposal.
+          example: TOrder111
+        startDateTime:
+          description: The date and time at which the order and line items associated with the Proposal are eligible to begin serving.
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+        endDateTime:
+          description: The date and time at which the order and line items associated with the Proposal stop being served.
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+        status:
+          allOf:
+            - $ref: '#/components/schemas/ProposalStatus'
+          description: The status of the Proposal. This attribute is read-only.
+        isArchived:
+          type: boolean
+          description: The archival status of the Proposal. This attribute is read-only.
+        advertiser:
+          description: The advertiser, to which this Proposal belongs, and a set of Contact objects associated with the advertiser.
+          allOf:
+            - $ref: '#/components/schemas/ProposalCompanyAssociation'
+        agencies:
+          type: array
+          items:
+            allOf:
+            - $ref: '#/components/schemas/ProposalCompanyAssociation'
+          description: The advertiser, to which this Proposal belongs, and a set of Contact objects associated with the advertiser.
+        internalNotes:
+          type: string
+          description: Optional, Provides any additional notes that may annotate the Proposal.
+        primarySalesperson:
+          description: The primary salesperson who brokered the transaction with the advertiser.
+          allOf:
+            - $ref: '#/components/schemas/SalespersonSplit'
+        salesPlannerIds:
+          type: array
+          items:
+            allOf:
+            - $ref: '#/components/schemas/SalespersonSplit'
+          description: List of unique IDs of User objects who are the sales planners of the Proposal.
+        primaryTraffickerId:
+          type: integer
+          description: The unique ID of the User who is primary trafficker and is responsible for trafficking the Proposal.
+        sellerContactIds:
+          type: array
+          items:
+            type: integer
+          description: users who are the seller's contacts.
+        appliedTeamIds:
+          type: array
+          items:
+            type: integer
+          description: The IDs of all teams that the Proposal is on directly.
+        appliedLabels:
+          type: array
+          items:
+            allOf:
+            - $ref: '#/components/schemas/AppliedLabel'
+          description: The set of labels applied directly to the Proposal. This attribute is optional.
+        effectiveAppliedLabels:
+          type: array
+          items:
+            allOf:
+            - $ref: '#/components/schemas/AppliedLabel'
+          description: Contains the set of labels applied directly to the proposal as well as those inherited ones.
+        currencyCode:
+          type: string
+          description: The currency code of this Proposal. This attribute is optional and defaults to network's currency code.
+          example: AUD
+        marketplaceInfo:
+          description: The marketplace info of this proposal if it has a corresponding order in Marketplace.
+          allOf:
+            - $ref: '#/components/schemas/ProposalMarketplaceInfo'
+        buyerRfp:
+          description: The buyer RFP associated with this Proposal, which is optional. This field will be null if the proposal is not initiated from RFP.
+          allOf:
+            - $ref: '#/components/schemas/BuyerRfp'
+        hasBuyerRfp:
+          type: boolean
+          description: Whether a Proposal contains a BuyerRfp field. If this field is true, it indicates that the Proposal in question orignated from a buyer.
+        deliveryPausingEnabled:
+          type: boolean
+          description: Whether pausing is consented for the Proposal. This field is optional and defaults to true.
+    ProposalCompanyAssociation: 
+      type: object
+      description: A ProposalCompanyAssociation represents a Company associated with the Proposal and a set of Contact objects belonging to the company.
+      properties:
+        companyId:
+          type: integer
+          description: The unique ID of the Company associated with the Proposal.
+        type:
+          description: The association type of the Company and Proposal.
+          allOf:
+            - $ref: '#/components/schemas/ProposalCompanyAssociationType'
+        contactIds:
+          type: array
+          items:
+            type: integer
+          description: List of unique IDs for Contact objects of the Company.
+    SalespersonSplit:
+      type: object
+      description: A SalespersonSplit represents a salesperson.
+      properties:
+        userId:
+          type: integer
+          description: The unique ID of the User responsible for the sales of the Proposal.
+    AppliedLabel:
+      type: object
+      description: Represents a Label that can be applied to an entity.
+      properties:
+        labelId:
+          type: integer
+          description: The ID of a created Label.
+        isNegated:
+          type: boolean
+          description: isNegated should be set to true to negate the effects of labelId.
+    ProposalMarketplaceInfo:
+      type: object
+      description: Marketplace info for a proposal with a corresponding order in Marketplace.
+      properties:
+        hasLocalVersionEdits:
+          type: boolean
+          description: Whether the non-free-editable fields of a Proposal are opened for edit.
+        negotiationStatus:
+          allOf:
+            - $ref: '#/components/schemas/NegotiationStatus'
+          description: The negotiation status of the Proposal. This attribute is read-only.
+        marketplaceComment:
+          type: string
+          description: The comment on the Proposal to be sent to the buyer.
+        isNewVersionFromBuyer:
+          type: boolean
+          description: Indicates that the buyer has made updates to the proposal on Marketplace.
+        buyerAccountId:
+          type: integer
+          description: The Authorized Buyers ID of the buyer that this Proposal is being negotiated with.
+        partnerClientId:
+          type: string
+          description: The ID used to represent Display & Video 360 client buyer partner ID (if Display & Video 360) or Authorized Buyers client buyer account ID.
+    BuyerRfp:
+      type: object
+      description: Represents a Label that can be applied to an entity.
+      properties:
+        costPerUnit:
+          allOf:
+            - $ref: '#/components/schemas/LineItemType'
+          description: CPM for the Proposal in question. This attribute is read-only.
+        units:
+          type: integer
+          description: The number of impressions per day that a buyer wishes to see in the Proposal derived from the request for proposal in question. This attribute is read-only.
+        budget:
+          allOf:
+            - $ref: '#/components/schemas/LineItemType'
+          description: Total amount of Money available to spend on this deal. This attribute is read-only.
+        currencyCode:
+          type: string
+          description: Currency code for this deal's budget and CPM. This attribute is read-only.
+        startDateTime:
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+          description: The DateTime in which the proposed deal should start serving. This attribute is read-only.
+        endDateTime:
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+          description: The DateTime in which the proposed deal should end serving. This attribute is read-only.
+        description:
+          type: string
+          description: A description of the proposed deal.
+        rfpType:
+          type: integer
+          description: Deal type; either Programmatic Guaranteed or Preferred Deal. This field corresponds to the type of Proposal that a buyer wishes to negotiate with a seller. This attribute is read-only.
+    ProposalCompanyAssociationType:
+      type: string
+      enum:
+        - PRIMARY_AGENCY
+        - BILLING_AGENCY
+        - BRANDING_AGENCY
+        - OTHER_AGENCY
+        - ADVERTISER
+        - UNKNOW
+      example: PRIMARY_AGENCY
+    NegotiationStatus:
+      type: string
+      enum:
+        - SELLER_INITIATED
+        - BUYER_INITIATED
+        - AWAITING_SELLER_REVIEW
+        - AWAITING_BUYER_REVIEW
+        - ONLY_SELLER_ACCEPTED
+        - FINALIZED
+        - CANCELLED
+        - UNKNOW
+      example: SELLER_INITIATED
+    RfpType:
+      type: string
+      enum:
+        - PROGRAMMATIC_GUARANTEED
+        - PREFERRED_DEAL
+        - UNKNOW
+      example: SELLER_INITIATED
+    ProposalStatus:
+      type: string
+      enum:
+        - DRAFT
+        - PENDING_APPROVAL
+        - APPROVED
+        - REJECTED
+        - UNKNOW
+      example: DRAFT
+    ProposalLineItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: The unique ID of the ProposalLineItem. This attribute is read-only.
+        proposalId:
+          type: integer
+          description: "The unique ID of the Proposal, to which the ProposalLineItem\
+            \ belongs. This attribute is required for creation and then is readonly."
+        name:
+          maxLength: 255
+          type: string
+          description: The name of the ProposalLineItem which should be unique under
+            the same Proposal. This attribute has a maximum length of 255 characters.
+            This attribute can be configured as editable after the proposal has been
+            submitted. Please check with your network administrator for editable fields
+            configuration.
+        startDateTime:
+          description: "The date and time at which the line item associated with the\
+            \ ProposalLineItem is enabled to begin serving. This attribute is optional\
+            \ during creation, but required and must be in the future when it turns\
+            \ into a line item. The DateTime.timeZoneID is required if start date\
+            \ time is not null. This attribute becomes readonly once the ProposalLineItem\
+            \ has started delivering."
+          allOf:
+          - $ref: '#/components/schemas/DateTime'
+        endDateTime:
+          description: "The date and time at which the line item associated with the\
+            \ ProposalLineItem stops beening served. This attribute is optional during\
+            \ creation, but required and must be after the startDateTime. The DateTime.timeZoneID\
+            \ is required if end date time is not null."
+          allOf:
+          - $ref: '#/components/schemas/DateTime'
+        timeZoneId:
+          type: string
+          description: "The time zone ID in tz database format (e.g. \"America/Los_Angeles\"\
+            ) for this ProposalLineItem. The number of serving days is calculated\
+            \ in this time zone. So if rateType is RateType.CPD, it will affect the\
+            \ cost calculation. The startDateTime and endDateTime will be returned\
+            \ in this time zone. This attribute is optional and defaults to the network's\
+            \ time zone. This attribute is read-only."
+        internalNotes:
+          maxLength: 65535
+          type: string
+          description: "Provides any additional notes that may annotate the ProposalLineItem.\
+            \ This attribute is optional and has a maximum length of 65,535 characters.\
+            \ This attribute can be configured as editable after the proposal has\
+            \ been submitted. Please check with your network administrator for editable\
+            \ fields configuration."
+        isArchived:
+          type: boolean
+          description: The archival status of the ProposalLineItem. This attribute
+            is read-only.
+        goal:
+          $ref: '#/components/schemas/Goal'
+        contractedUnitsBought:
+          type: integer
+          description: "The contracted number of impressions or clicks. If this is\
+            \ a LineItemType.SPONSORSHIP ProposalLineItem, has RateType.CPD as a rate\
+            \ type, and isProgrammatic is false, then this represents the lifetime\
+            \ minimum impression. If this is a LineItemType.SPONSORSHIP ProposalLineItem,\
+            \ has RateType.CPD as a rate type, and isProgrammatic is true, then this\
+            \ represents the daily minimum impression.\n\nThis attribute is required\
+            \ for percentage-based-goal proposal line items. It does not impact ad-serving\
+            \ and is for reporting purposes only.\n"
+        deliveryRateType:
+          $ref: '#/components/schemas/DeliveryRateType'
+        roadBlockingType:
+          $ref: '#/components/schemas/RoadBlockingType'
+        companionDeliveryOption:
+          $ref: '#/components/schemas/CompanionDeliveryOption'
+        videoMaxDuration:
+          type: integer
+          description: "The max duration of a video creative associated with this\
+            \ ProposalLineItem in milliseconds. This attribute is optional, defaults\
+            \ to the Product.videoMaxDuration on the Product it was created with,\
+            \ and only meaningful if this is a video proposal line item."
+        videoCreativeSkippableAdType:
+          $ref: '#/components/schemas/SkippableAdType'
+        frequencyCaps:
+          type: array
+          description: The set of frequency capping units for this ProposalLineItem.
+            This attribute is optional during creation and defaults to the product's
+            frequency caps if Product.allowFrequencyCapsCustomization is false
+          items:
+            $ref: '#/components/schemas/FrequencyCap'
+        dfpLineItemId:
+          type: integer
+          description: The unique ID of corresponding LineItem. This will be null
+            if the Proposal has not been pushed to Ad Manager. This attribute is read-only.
+        lineItemType:
+          $ref: '#/components/schemas/LineItemType'
+        lineItemPriority:
+          type: integer
+          description: "The priority for the corresponding LineItem of the ProposalLineItem.\
+            \ This attribute is optional during creation and defaults to the product's\
+            \ priority, or a default value assigned by Google. See LineItem.priority\
+            \ for more information."
+        rateType:
+          $ref: '#/components/schemas/RateType'
+        creativePlaceholders:
+          type: array
+          description: Details about the creatives that are expected to serve through
+            the ProposalLineItem. This attribute is optional during creation and defaults
+            to the product's creative placeholders.
+          items:
+            $ref: '#/components/schemas/CreativePlaceholder'
+        targeting:
+          type: object
+          description: Contains the targeting criteria for the ProposalLineItem. This
+            attribute is optional during creation and defaults to the product's targeting.
+        customFieldValues:
+          type: array
+          description: The values of the custom fields associated with the ProposalLineItem.
+            This attribute is optional. This attribute can be configured as editable
+            after the proposal has been submitted. Please check with your network
+            administrator for editable fields configuration.
+          items:
+            type: object
+        appliedLabels:
+          type: array
+          description: The set of labels applied directly to the ProposalLineItem.
+            This attribute is optional.
+          items:
+            $ref: '#/components/schemas/AppliedLabel'
+        effectiveLabels:
+          type: array
+          description: "Contains the set of labels applied directly to the proposal\
+            \ as well as those inherited ones. If a label has been negated, only the\
+            \ negated label is returned. This attribute is read-only."
+          items:
+            $ref: '#/components/schemas/AppliedLabel'
+        disableSameAdvertiserCompetitiveExclusion:
+          type: boolean
+          description: "If a line item has a series of competitive exclusions on it,\
+            \ it could be blocked from serving with line items from the same advertiser.\
+            \ Setting this to true will allow line items from the same advertiser\
+            \ to serve regardless of the other competitive exclusion labels being\
+            \ applied.\n\nThis attribute is optional and defaults to false.\n"
+        isSold:
+          type: boolean
+          description: Indicates whether this ProposalLineItem has been sold. This
+            attribute is read-only.
+        netRate:
+          $ref: '#/components/schemas/Money'
+        netCost:
+          $ref: '#/components/schemas/Money'
+        deliveryIndicator:
+          $ref: '#/components/schemas/DeliveryIndicator'
+        deliveryData:
+          $ref: '#/components/schemas/DeliveryData'
+        computedStatus:
+          $ref: '#/components/schemas/ComputedStatus'
+        lastModifiedDateTime:
+          $ref: '#/components/schemas/DateTime'
+        reservationStatus:
+          $ref: '#/components/schemas/ReservationStatus'
+        lastReservationTime:
+          $ref: '#/components/schemas/DateTime'
+        environmentType:
+          $ref: '#/components/schemas/EnvironmentType'
+        allowedFormats:
+          type: array
+          description: "The set of AllowedFormats that this proposal line item can\
+            \ have. If the set is empty, this proposal line item allows all formats."
+          items:
+            $ref: '#/components/schemas/AllowedFormats'
+        isProgrammatic:
+          type: boolean
+          description: Whether or not the Proposal for this ProposalLineItem is a
+            programmatic deal. This attribute is populated from Proposal.isProgrammatic.
+            This attribute is read-only.
+        marketplaceInfo:
+          type: object
+          description: "The marketplace info if this proposal line item is programmatic,\
+            \ null otherwise."
+        additionalTerms:
+          type: string
+          description: Additional terms shown to the buyer in Marketplace.
+        programmaticCreativeSource:
+          $ref: '#/components/schemas/ProgrammaticCreativeSource'
+        grpSettings:
+          $ref: '#/components/schemas/GrpSettings'
+        estimatedMinimumImpressions:
+          type: integer
+          description: The estimated minimum impressions that should be delivered
+            for a proposal line item.
+        thirdPartyMeasurementSettings:
+          type: object
+          description: Contains third party measurement settings for cross-sell Partners
+        makeGoodInfo:
+          $ref: '#/components/schemas/ProposalLineItemMakegoodInfo'
+        hasMakeGood:
+          type: boolean
+          description: Whether this proposal line item has an associated makegood.
+            This attribute is read-only.
+        canCreateMakeGood:
+          type: boolean
+          description: Whether a new makegood associated with this line item can be
+            created. This attribute is read-only.
+        pauseRole:
+          $ref: '#/components/schemas/NegotiationRole'
+        pauseReason:
+          type: string
+          description: "The reason for pausing the ProposalLineItem, provided by the\
+            \ pauseRole. It is null when the ProposalLineItem is not paused. This\
+            \ attribute is read-only."
+      description: "A ProposalLineItem is added to a programmatic Proposal and is\
+        \ similar to a delivery LineItem. It contains delivery details including information\
+        \ like impression goal or quantity, start and end times, and targeting.\n\n\
+        For full documentation, see https://developers.google.com/ad-manager/api/reference/v202202/ProposalLineItemService.ProposalLineItem\n"
+    DeliveryRateType:
+      type: string
+      description: "The strategy for delivering ads over the course of the ProposalLineItem's\
+        \ duration. This attribute is optional and default value is DeliveryRateType.EVENLY.\
+        \ For a Preferred deal ProposalLineItem, the value can only be DeliveryRateType.FRONTLOADED."
+      enum:
+      - EVENLY
+      - FRONTLOADED
+      - AS_FAST_AS_POSSIBLE
+    RoadBlockingType:
+      type: string
+      description: "The strategy for serving roadblocked creatives, i.e. instances\
+        \ where multiple creatives must be served together on a single web page. This\
+        \ attribute is optional during creation and defaults to the product's roadblocking\
+        \ type, or RoadblockingType.ONE_OR_MORE if not specified by the product."
+      enum:
+      - ONLY_ONE
+      - ONE_OR_MORE
+      - AS_MANY_AS_POSSIBLE
+      - ALL_ROADBLOCK
+      - CREATIVE_SET
+    CompanionDeliveryOption:
+      type: string
+      description: The delivery option for companions. This is only valid if the roadblocking
+        type is RoadblockingType.CREATIVE_SET. The default value for roadblocking
+        creatives is CompanionDeliveryOption.OPTIONAL. The default value in other
+        cases is CompanionDeliveryOption.UNKNOWN. Providing something other than CompanionDeliveryOption.UNKNOWN
+        will cause an error.
+      enum:
+      - OPTIONAL
+      - AT_LEAST_ONE
+      - ALL
+      - UNKNOWN
+    SkippableAdType:
+      type: string
+      description: "The proposal line item's creatives' skippability. This attribute\
+        \ is optional, only applicable for video proposal line items, and defaults\
+        \ to SkippableAdType.NOT_SKIPPABLE."
+      enum:
+      - UNKNOWN
+      - DISABLED
+      - ENABLED
+      - INSTREAM_SELECT
+      - ANY
+    FrequencyCap:
+      type: object
+      properties:
+        maxImpressions:
+          type: integer
+          description: The maximum number of impressions than can be served to a user
+            within a specified time period.
+        numTimeUnits:
+          type: integer
+          description: The number of FrequencyCap#timeUnit to represent the total
+            time period.
+        timeUnit:
+          $ref: '#/components/schemas/TimeUnit'
+      description: Represents a limit on the number of times a single viewer can be
+        exposed to the same LineItem in a specified time period.
+    TimeUnit:
+      type: string
+      description: The unit of time for specifying the time period.
+      enum:
+      - MINUTE
+      - HOUR
+      - DAY
+      - WEEK
+      - MONTH
+      - LIFETIME
+      - POD
+      - STREAM
+      - UNKNOWN
+    RateType:
+      type: string
+      description: The method used for billing the ProposalLineItem. This attribute
+        is read-only.
+      enum:
+      - CPM
+      - CPC
+      - CPD
+      - CPU
+      - FLAT_FEE
+      - VCPM
+      - CPM_IN_TARGET
+      - UNKNOWN
+    CreativePlaceholder:
+      type: object
+      properties:
+        size:
+          $ref: '#/components/schemas/Size'
+        creativeTemplateId:
+          type: integer
+          description: |
+            The native creative template ID.
+
+            This value is only required if creativeSizeType is CreativeSizeType.NATIVE.
+        expectedCreativeCount:
+          type: integer
+          description: Contains the set of labels applied directly to this creative
+            placeholder as well as those inherited from the creative template from
+            which this creative placeholder was instantiated. This field is readonly
+            and is assigned by Google.
+        creativeSizeType:
+          type: string
+          description: "Describes the types of sizes a creative can be. By default,\
+            \ the creative's size is CreativeSizeType.PIXEL, which is a dimension\
+            \ based size (width-height pair)."
+          enum:
+          - PIXEL
+          - ASPECT_RATIO
+          - INTERSTITIAL
+          - IGNORED
+          - NATIVE
+          - AUDIO
+        targetingName:
+          type: string
+          description: |
+            The name of the CreativeTargeting for creatives this placeholder represents.
+
+            This attribute is optional. Specifying creative targeting here is for forecasting purposes only and has no effect on serving. The same creative targeting should be specified on a LineItemCreativeAssociation when associating a Creative with the LineItem.
+        isAmpOnly:
+          type: boolean
+          description: |
+            Indicate if the expected creative of this placeholder has an AMP only variant.
+
+            This attribute is optional. It is for forecasting purposes only and has no effect on serving.
+    Money:
+      type: object
+      properties:
+        currencyCode:
+          type: string
+          description: Three letter currency code in string format.
+          example: AUD
+        microAmount:
+          type: integer
+          description: "Money values are always specified in terms of micros which\
+            \ are a millionth of the fundamental currency unit. For US dollars, $1\
+            \ is 1,000,000 micros."
+          example: 1000000
+      description: Total budget for all line items of this Order. This value is present
+        only on response.
+    DeliveryIndicator:
+      type: object
+      properties:
+        expectedDeliveryPercentage:
+          type: number
+          description: How much the LineItem was expected to deliver as a percentage
+            of LineItem.primaryGoal.
+        actualDeliveryPercentage:
+          type: number
+          description: How much the line item actually delivered as a percentage of
+            LineItem.primaryGoal.
+      description: Indicates the delivery performance of the LineItem.
+    DeliveryData:
+      type: integer
+      description: Clicks or impressions delivered for the last 7 days.
+    ComputedStatus:
+      type: string
+      description: Describes the computed LineItem status that is derived from the
+        current state of the line item.
+      enum:
+      - DELIVERY_EXTENDED
+      - DELIVERING
+      - READY
+      - PAUSED
+      - INACTIVE
+      - PAUSED_INVENTORY_RELEASED
+      - PENDING_APPROVAL
+      - COMPLETED
+      - DISAPPROVED
+      - DRAFT
+      - CANCELED
+    ReservationStatus:
+      type: string
+      description: Represents the inventory reservation status for ProposalLineItem
+        objects.
+      enum:
+      - RESERVED
+      - NOT_RESERVED
+      - RELEASE
+      - CHECK_LINE_ITEM_RESERVATION_STATUS
+      - UNKNOWN
+    EnvironmentType:
+      type: string
+      description: Enum for the valid environments in which ads can be shown.
+      enum:
+      - BROWSER
+      - VIDEO_PLAYER
+    AllowedFormats:
+      type: string
+      description: The formats that a publisher allows on their programmatic LineItem
+        or ProposalLineItem.
+      enum:
+      - AUDIO
+      - UNKNOWN
+    ProgrammaticCreativeSource:
+      type: string
+      description: Types of programmatic creative sources.
+      enum:
+      - PUBLISHER
+      - ADVERTISER
+      - UNKNOWN
+    GrpSettings:
+      type: object
+      properties:
+        minTargetAge:
+          type: integer
+          description: Specifies the minimum target age (in years) of the LineItem.
+            This field is only applicable if provider is not null.
+        maxTargetAge:
+          type: integer
+          description: Specifies the maximum target age (in years) of the LineItem.
+            This field is only applicable if provider is not null.
+        targetGender:
+          $ref: '#/components/schemas/GrpTargetGender'
+        provider:
+          $ref: '#/components/schemas/GrpProvider'
+        targetImpressionGoal:
+          type: integer
+          description: "Specifies the impression goal for the given target demographic.\
+            \ This field is only applicable if provider is not null and demographics-based\
+            \ goal is selected by the user. If this field is set, LineItem.primaryGoal\
+            \ will have its Goal.units value set by Google to represent the estimated\
+            \ total quantity."
+        inTargetRatioEstimateMilliPercent:
+          type: integer
+          description: "Estimate for the in-target ratio given the line item's audience\
+            \ targeting. This field is only applicable if provider is Nielsen, LineItem.primaryGoal\
+            \ is in-target impressions, and LineItem.CostType is in-target CPM. This\
+            \ field determines the in-target ratio to use for pacing Nielsen line\
+            \ items before Nielsen reporting data is available. Represented as a milli\
+            \ percent, so 55.7% becomes 55700."
+        nielsenCtvPacingType:
+          $ref: '#/components/schemas/NielsenCtvPacingType'
+        pacingDeviceCategorizationType:
+          $ref: '#/components/schemas/PacingDeviceCategorizationType'
+        applyTrueCoview:
+          type: boolean
+      description: GrpSettings contains information for a line item that will have
+        a target demographic when serving. This information will be used to set up
+        tracking and enable reporting on the demographic information
+    GrpTargetGender:
+      type: string
+      description: Represents the target gender for a GRP demographic targeted line
+        item.
+      enum:
+      - UNKNOWN
+      - MALE
+      - FEMALE
+      - BOTH
+    GrpProvider:
+      type: string
+      description: Represents available GRP providers that a line item will have its
+        target demographic measured by.
+      enum:
+      - UNKNOWN
+      - NIELSEN
+      - GOOGLE
+    NielsenCtvPacingType:
+      type: string
+      description: Represents the pacing computation method for impressions on connected
+        devices for a Nielsen measured line item. This only applies when Nielsen measurement
+        is enabled for connected devices.
+      enum:
+      - UNKNOWN
+      - NONE
+      - COVIEW
+      - STRICT_COVIEW
+    PacingDeviceCategorizationType:
+      type: string
+      description: Represents whose device categorization to use on Nielsen measured
+        line item with auto-pacing enabled.
+      enum:
+      - UNKNOWN
+      - NIELSEN
+      - GOOGLE
+    ProposalLineItemMakegoodInfo:
+      type: object
+      properties:
+        originalProposalLineItemId:
+          type: integer
+          description: The ID of the original proposal line item on which this makegood
+            is based. This attribute is read-only.
+        reason:
+          type: string
+          description: "The publisher-provided reason why this makegood was initiated.\
+            \ This is free form text. The following predefined values can be used\
+            \ to render predefined options in the UI. UNDERDELIVERY: 'Impression underdelivery',\
+            \ SECONDARY_DELIVERY_TERMS: 'Did not meet secondary delivery terms ',\
+            \ PERFORMANCE: 'Performance issues',\n"
+      description: Makegood info for a ProposalLineItemDto.
+    NegotiationRole:
+      type: string
+      description: The role (buyer or seller) that performed an action in the negotiation
+        of a Proposal.
+      enum:
+      - BUYER
+      - SELLER
+      - UNKNOWN
+    CreateUpdateProposalLineItemResponse_data:
+      type: object
+      properties:
+        proposalLineItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProposalLineItem'

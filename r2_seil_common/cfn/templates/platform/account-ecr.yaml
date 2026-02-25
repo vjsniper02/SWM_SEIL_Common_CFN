@@ -1,0 +1,46 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+  This stack contains all of the ECRs that are needed per account.
+  The idea is that repo names match the lamba name i.e. <account>-<some-parent-name>-<name>
+
+Parameters:
+  AccountPrefix:
+    Description: Account Name as Prefix
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /account/name
+
+Resources:
+  ActivateAppFlows:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub "${AccountPrefix}-utilities-activateflows"
+      EncryptionConfiguration:
+        EncryptionType: KMS
+        KmsKey: !Ref EcrKeyAlias
+
+  AppFlowMultiply:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub "${AccountPrefix}-utilities-appflowmultiply"
+      EncryptionConfiguration:
+        EncryptionType: KMS
+        KmsKey: !Ref EcrKeyAlias
+
+  EcrKey:
+    Type: AWS::KMS::Key
+    Properties:
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+          Action: 'kms:*'
+          Resource: '*'
+
+  EcrKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub alias/${AccountPrefix}-ecr-account-wde
+      TargetKeyId: !Ref EcrKey

@@ -1,0 +1,30 @@
+{
+  "requestContext": {
+    "elb": {
+      "targetGroupArn": "arn:aws:elasticloadbalancing:ap-southeast-2:[REDACTED_AWS_ACCOUNT_ID]:targetgroup/apidev-techone-tg/[REDACTED_TARGET_GROUP_ID]"
+    }
+  },
+  "httpMethod": "GET",
+  "path": "/v1/techone/foreign-exchange-rate/aud-usd",
+  "queryStringParameters": {},
+  "headers": {
+    "accept": "*/*",
+    "accept-encoding": "gzip, deflate, br",
+    "authorization": "[REDACTED_AUTHORIZATION_TOKEN]",
+    "content-length": "0",
+    "content-type": "application/json",
+    "forwarded": "for=14.200.217.89;host=3fj9vj7j98.execute-api.ap-southeast-2.amazonaws.com;proto=https",
+    "host": "3fj9vj7j98.execute-api.ap-southeast-2.amazonaws.com",
+    "postman-token": "[REDACTED_POSTMAN_TOKEN]",
+    "user-agent": "PostmanRuntime/7.29.0",
+    "via": "HTTP/1.1 AmazonAPIGateway",
+    "x-amzn-trace-id": "Self=1-629d5abd-7204072d7d7f42f83bd76131;Root=1-629d5abd-78d7a2330dea702850ed2de5",
+    "x-application-label": "postman",
+    "x-correlation-id": "postman-testing-1",
+    "x-forwarded-for": "10.80.144.128",
+    "x-forwarded-port": "443",
+    "x-forwarded-proto": "https"
+  },
+  "body": "",
+  "isBase64Encoded": false
+}

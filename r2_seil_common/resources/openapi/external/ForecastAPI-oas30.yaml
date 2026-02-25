@@ -1,0 +1,631 @@
+openapi: "3.0.1"
+info:
+  title: Forecast-API
+  description: >-
+
+    # Introduction
+
+
+    <table><tbody><tr><td class = 'into_api' style='border:none;padding:0 0 0
+    0'><p>This API provides methods for estimating traffic (clicks/impressions) for line items. Forecasts can be provided for LineItem objects that exist in the system or which have not had an ID set yet.</p></td></tr></tbody></table>
+
+
+    # Features
+
+
+    Forecast API provides the below features.
+
+    1. Retreive availability forecast
+
+    # Getting Access to the API
+
+    1. Reach out to TBD to get access to this API.
+
+
+    Now head over to **Getting Started** where you can find more details about
+    the API.
+
+
+    # Getting Started
+
+
+    Below are the steps to invoke this API.
+      1. Generate authorizer token.
+      2. Use retreived token within expiry window in header for all call to this API
+
+
+    # Frequently Asked Questions
+
+
+    **Q: How can i get support for this API?**
+
+
+    A. TBD
+  version: 1.0.0
+servers:
+- url: "https://tbd/{basePath}"
+  variables:
+    basePath:
+      default: "v1"
+  description: API dev
+paths:
+  /gam/forecast:
+    post:
+      tags:
+        - Get Availability Forecast
+      summary: get availability forecast
+      description: |
+        Gets the availability forecast for a Prospective LineItem. An availability forecast reports the maximum number of available units that the line item can book, and the total number of units matching the line item's targeting.
+      parameters:
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          description: All responses from the service contain an X-Correlation-Id header containing a unique GUID per request. If the request contains an X-Correlation-Id HTTP Header the service will use this value, otherwise it will generate a new correlation id. The correlation id is a GUID in 8-4-4-12 format.
+          schema:
+            type: string
+            example: f8443d84-3cce-4b56-8a8e-328fe77158a7
+        - name: X-Application-Label
+          in: header
+          required: false
+          description: Application label to uniquely identify source system
+          schema:
+            type: string
+            example: salesforce
+      requestBody:
+        description: Availability Forecast request
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AvailabilityForecastRequest'
+      security:
+      - API-CustomAuthoriser: []
+      responses:
+        '200':
+          description: successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailabilityForecastResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse400'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+        '404':
+          description: Not Foound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+        '500':
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse500'
+        default:
+          description: any error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseDefault'
+components:
+  securitySchemes:
+    API-CustomAuthoriser:
+      type: "apiKey"
+      name: "Authorization"
+      in: "header"
+      x-amazon-apigateway-authtype: "custom"
+  schemas:
+    ServiceResponse:
+      type: object
+      properties:
+        applicationLabel:
+          type: string
+          description: api consumer name mapped from request header parameter
+          example: salesforce
+        time:
+          type: string
+          format: date-time
+          description: response time sent by api/microservice
+          example: '2021-10-04T10:54:24.792+1000'
+        correlationId:
+          type: string
+          description: correlation id sent in request from header
+          example: f8443d84-3cce-4b56-8a8e-328fe77158a7
+    ErrorResponse400:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: Mandatory, http code
+          example: 400
+        message:
+          type: string
+          description: Optional. failure/exception short message
+          example: Bad Request
+        status:
+          type: string
+          description: Optional. application error code in case of successful response.
+          example: 400301
+        errors:
+          type: array
+          description: Optional.
+          items:
+            $ref: '#/components/schemas/ReservationDetailsError'
+    ErrorResponse500:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: Mandatory, http code
+          example: 500
+        message:
+          type: string
+          description: Optional. failure/exception short message
+          example: Internal server error
+        status:
+          type: string
+          description: Optional. application error code in case of successful response.
+          example: EC001
+        errors:
+          type: array
+          description: Optional.
+          items:
+            $ref: '#/components/schemas/ErrorsObject'
+    ErrorsObject:
+      type: object
+      properties:
+        code:
+          type: string
+          example: "DS501"
+        message:
+          type: string
+          example: Downstream not available
+    ReservationDetailsError:
+      type: object
+      properties:
+        code:
+          $ref: '#/components/schemas/ReservationDetailsError.Reason'
+        message:
+          type: string
+          example: TBD
+    ErrorResponse404:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: http code
+          example: 404
+        message:
+          type: string
+          description: Optional.
+          example: Not Found
+        status:
+          type: string
+          description: Optional.
+          example: 404000
+    ErrorResponse401:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Unauthorised
+    ErrorResponse403:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Forbidden
+    ErrorResponseDefault:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+          description: Mandatory. Http Code
+          example: 500
+        message:
+          type: string
+          example: Internal server error
+    AvailabilityForecastRequest:
+      type: object
+      properties:
+        lineItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProspectiveLineItem'
+          description: the prospective line item (new or existing) to be forecasted for availability
+        # forecastOptions:
+        #   type: object
+        #   description: options controlling the forecast
+    AvailabilityForecastResponse:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: http code
+          example: 200
+        message:
+          type: string
+          description: Optional.
+          example: success
+        status:
+          type: string
+          description: Optional.
+          example: 200000
+        data:
+          $ref: '#/components/schemas/lineItemsResponse'
+    lineItemsResponse:
+      type: object
+      properties:
+        lineItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/AvailabilityForecast'
+          description: list of line items
+    AvailabilityForecast:
+      type: object
+      properties:
+        lineItemId:
+          type: number
+          description: Uniquely identifies this availability forecast. This value is read-only and is assigned by Google when the forecast is created. The attribute will be either the ID of the LineItem object it represents, or null if the forecast represents a prospective line item.
+          example: 1234
+        orderId:
+          type: number
+          description: The unique ID for the Order object that this line item belongs to, or null if the forecast represents a prospective line item without an LineItem.orderId set.
+          example: null
+        unitType:
+          description: The unit with which the goal or cap of the LineItem is defined. Will be the same value as Goal.unitType for both a set line item or a prospective one.
+          allOf:
+          - $ref: '#/components/schemas/UnitType'
+          example: IMPRESSIONS
+        availableUnits:
+          type: number
+          description: The number of units
+          example: -30
+        deliveredUnits:
+          type: number
+          description: The number of units
+          example: 600000
+        matchedUnits:
+          type: number
+          description: The number of units
+          example: 120
+        possibleUnits:
+          type: number
+          description: The number of units
+          example: 40
+        reservedUnits:
+          type: number
+          description: The number of units
+          example: 20
+    ProspectiveLineItem:
+      description: Represents a prospective line item to be forecasted.
+      type: object
+      properties:
+        lineItem:
+          $ref: '#/components/schemas/LineItem'
+        # proposalLineItem:
+        #   type: object
+        #   description: Optional, reserved for future. The target of the forecast if this prospective line item is a proposal line item.
+        # advertiserId:
+        #   type: number
+        #   description: Optional, When set, the line item is assumed to be from this advertiser, and unified blocking rules will apply accordingly. If absent, line items without an existing order won't be subject to unified blocking rules.
+        rules:
+          type: object
+          description: Mandatory, rules to process this transaction
+          allOf:
+          - $ref: '#/components/schemas/Rules'
+    LineItem:
+      description: LineItem is an advertiser's commitment to purchase a specific number of ad impressions, clicks, or time.
+      type: object
+      properties:
+        targeting:
+          $ref: '#/components/schemas/Targeting'
+      allOf:
+      - $ref: '#/components/schemas/LineItemSummary'
+      ##LineItemSummary modified##
+    LineItemSummary:
+      type: object
+      description: LineItem is an advertiser's commitment to purchase a specific number of ad impressions, clicks, or time.
+      properties:
+        orderId:
+          type: number
+          description: Optional, TThe ID of the Order to which the LineItem belongs.
+          example: 1234
+        name:
+          type: string
+          description: Mandatory, The name of the line item.
+          example: Print Banner
+        startDateTime:
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+          description: Mandatory, The date and time on which the LineItem is enabled to begin serving. This attribute is required and must be in the future.
+        startDateTimeType:
+          type: string
+          enum:
+          - USE_START_DATE_TIME
+          - IMMEDIATELY
+          - ONE_HOUR_FROM_NOW
+          - UNKNOWN
+          description: Optional, Specifies whether to start serving to the LineItem right away, in an hour, etc.
+          example: 'USE_START_DATE_TIME'
+        #endDateTime:
+          #description: The date and time on which the LineItem will stop serving. This attribute is required unless LineItem.unlimitedEndDateTime is set to true. If specified, it must be after the LineItem.startDateTime. This end date and time does not include auto extension days.
+          #$ref: '#/components/schemas/DateTime'
+        unlimitedEndDateTime:
+          type: boolean
+          description: Specifies whether or not the LineItem has an end time. This attribute is optional and defaults to false.
+          example: false
+        lineItemType:
+          allOf:
+            - $ref: '#/components/schemas/LineItemType'
+          description: Mandatory, Indicates the line item type of a LineItem. This attribute is required. The line item type determines the default priority of the line item.
+          example: 'STANDARD'
+        costPerUnit:
+          $ref: '#/components/schemas/Money'
+        costType:
+          type: string
+          description: Mandatory, The method used for billing this LineItem. This attribute is required.
+          enum:
+          - CPA
+          - CPC
+          - CPD
+          - CPM
+          - VCPM
+          - CPM_IN_TARGET
+          - UNKNOWN
+          example: CPC
+        creativePlaceholders:
+          type: array
+          description: Mandatory, Details about the creatives that are expected to serve through this LineItem. This attribute is required and replaces the creativeSizes attribute.
+          items:
+            $ref: '#/components/schemas/CreativePlaceholder'
+        primaryGoal:
+          $ref: '#/components/schemas/Goal'
+    Money:
+      type: object
+      description: Total budget for all line items of this Order. This value is present only on response.
+      properties:
+        currencyCode:
+          type: string
+          description: Three letter currency code in string format.
+          example: AUD
+        microAmount:
+          type: number
+          description: Money values are always specified in terms of micros which are a millionth of the fundamental currency unit. For US dollars, $1 is 1,000,000 micros.
+          example: 1000000
+    ##CreativePlaceholder Edited##
+    CreativePlaceholder:
+      type: object
+      description: A CreativePlaceholder describes a slot that a creative is expected to fill. This is used primarily to help in forecasting, and also to validate that the correct creatives are associated with the line item. A CreativePlaceholder must contain a size, and it can optionally contain companions. Companions are only valid if the line item's environment type is EnvironmentType.VIDEO_PLAYER.
+      properties:
+        size:
+          $ref: '#/components/schemas/Size'
+        isAmpOnly:
+          type: boolean
+          description: Optional, Indicate if the expected creative of this placeholder has an AMP only variant. This attribute is optional. It is for forecasting purposes only and has no effect on serving.
+    Size:
+      type: object
+      description: Represents the dimensions of an AdUnit, LineItem or Creative.
+      properties:
+        width:
+          type: integer
+          description: The width of the LineItem
+          example: 100
+        height:
+          type: integer
+          description: The height of the LineItem
+          example: 100
+        # isAspectRatio:
+        #   type: boolean
+        #   description: Whether this size represents an aspect ratio.
+        #   example: true
+    Goal:
+      type: object
+      description: Defines the criteria a LineItem needs to satisfy to meet its delivery goal.
+      properties:
+        goalType:
+          description: The type of the goal for the LineItem. It defines the period over which the goal for LineItem should be reached.
+          allOf:
+          - $ref: '#/components/schemas/GoalType'
+        unitType:
+          description: The type of the goal unit for the LineItem.
+          allOf:
+          - $ref: '#/components/schemas/UnitType'
+        units:
+          type: number
+          description: If this is a primary goal, it represents the number or percentage of impressions or clicks that will be reserved for the LineItem.
+          example: 20
+    GoalType:
+      type: string
+      enum:
+        - NONE
+        - LIFETIME
+        - DAILY
+        - UNKNOWN
+      example: DAILY
+    UnitType:
+      type: string
+      enum:
+        - IMPRESSIONS
+        - CLICKS
+        - CLICK_THROUGH_CPA_CONVERSIONS
+        - VIEW_THROUGH_CPA_CONVERSIONS
+        - TOTAL_CPA_CONVERSIONS
+        - VIEWABLE_IMPRESSIONS
+        - IN_TARGET_IMPRESSIONS
+        - UNKNOWN
+      example: IMPRESSIONS
+    Targeting:
+      type: object
+      description: Contains targeting criteria for LineItem objects.
+      properties:
+        geoTargeting:
+          description: Optional, Specifies what geographical locations are targeted by the LineItem. This attribute is optional.
+          allOf:
+            - $ref: '#/components/schemas/GeoTargeting'
+        inventoryTargeting:
+          description: Mandatory, Specifies what inventory is targeted by the LineItem. This attribute is required. The line item must target at least one ad unit or placement.
+          allOf:
+            - $ref: '#/components/schemas/InventoryTargeting'
+    GeoTargeting:
+      type: object
+      description: Provides line items the ability to target geographical locations.
+      properties:
+        targetedLocations:
+          description: The geographical locations being targeted by the LineItem.
+          type: array
+          items:
+            $ref: '#/components/schemas/Location'
+        excludedLocations:
+          description: The geographical locations being excluded by the LineItem.
+          type: array
+          items:
+            $ref: '#/components/schemas/Location'
+    Location:
+      type: object
+      description: A Location represents a geographical entity that can be targeted.
+      properties:
+        id:
+          description: Uniquely identifies each Location.
+          type: number
+          example: 1234
+    InventoryTargeting:
+      type: object
+      description: A collection of targeted and excluded ad units and placements.
+      properties:
+        targetedAdUnits:
+          description: A list of targeted AdUnitTargeting.
+          type: array
+          items:
+            $ref: '#/components/schemas/AdUnitTargeting'
+        excludedAdUnits:
+          description: A list of excluded AdUnitTargeting.
+          type: array
+          items:
+            $ref: '#/components/schemas/AdUnitTargeting'
+        targetedPlacementIds:
+          type: array
+          description: A list of targeted Placement ids.
+          items:
+            type: number
+    AdUnitTargeting:
+      type: object
+      description: Represents targeted or excluded ad units.
+      properties:
+        adUnitId:
+          description: Included or excluded ad unit id.
+          type: string
+          example: 22223488449
+        includeDescendants:
+          type: boolean
+          description: Whether or not all descendants are included (or excluded) as part of including (or excluding) this ad unit. By default, the value is true which means targeting this ad unit will target all of its descendants.
+          example: true
+    DateTime:
+      type: object
+      description: Represents a date combined with the time of day.
+      properties:
+        date:
+          $ref: '#/components/schemas/Date'
+        hour:
+          type: integer
+          example: 0
+        minute:
+          type: integer
+          example: 0
+        second:
+          type: integer
+          example: 0
+        timeZoneId:
+          type: string
+          example: America/Los_Angeles
+    Date:
+      type: object
+      description: Represents a date.
+      properties:
+        year:
+          type: integer
+          description: Year (e.g., 2009)
+          example: 2022
+        month:
+          type: integer
+          description: Month (1..12)
+          example: 2
+        day:
+          type: integer
+          description: Day (1..31)
+          example: 15
+    ReservationDetailsError.Reason:
+      type: string
+      description: The reasons for the target error.
+      enum:
+      - UNLIMITED_UNITS_BOUGHT_NOT_ALLOWED
+      - UNLIMITED_END_DATE_TIME_NOT_ALLOWED
+      - PERCENTAGE_UNITS_BOUGHT_TOO_HIGH
+      - DURATION_NOT_ALLOWED
+      - UNIT_TYPE_NOT_ALLOWED
+      - COST_TYPE_NOT_ALLOWED
+      - COST_TYPE_UNIT_TYPE_MISMATCH_NOT_ALLOWED
+      - LINE_ITEM_TYPE_NOT_ALLOWED
+      - NETWORK_REMNANT_ORDER_CANNOT_UPDATE_LINEITEM_TYPE
+      - BACKFILL_WEBPROPERTY_CODE_NOT_ALLOWED
+      - UNKNOWN
+      example: UNLIMITED_UNITS_BOUGHT_NOT_ALLOWED
+    LineItemType:
+      type: string
+      description: LineItemType indicates the priority of a LineItem, determined by the way in which impressions are reserved to be served for it.
+      enum:
+        - SPONSORSHIP
+        - STANDARD
+        - NETWORK
+        - BULK
+        - PRICE_PRIORITY
+        - HOUSE
+        - LEGACY_DFP
+        - CLICK_TRACKING
+        - ADSENSE
+        - AD_EXCHANGE
+        - BUMPER
+        - ADMOB
+        - PREFERRED_DEAL
+        - UNKNOWN
+    Rules:
+      type: object
+      description: Rules for processing transaction
+      properties:
+        route:
+          type: object
+          description: route config
+          allOf:
+          - $ref: '#/components/schemas/Route'
+    Route:
+      type: object
+      description: route rules as binary config
+      properties:
+        toGam:
+          type: boolean
+          description: should be true if it need to be delivered to GAM

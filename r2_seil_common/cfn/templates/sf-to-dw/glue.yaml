@@ -1,0 +1,237 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description:
+  Glue jobs for transformation
+
+Parameters:
+  EnvPrefix:
+    Type: String
+    Description: Environment Name as Prefix
+
+  AccountPrefix:
+    Description: Account Name as Prefix
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /account/name
+
+  ExtraPyLibsS3Path:
+    Type: String
+    Description: Comma delimited string of S3 paths of extra Python libraries used by the Glue job
+
+Resources:
+  MockDWBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Properties:
+      BucketName: !Sub "{{resolve:ssm:ProjPrefix}}-${EnvPrefix}-sf-to-dw-dwmock"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: "aws:kms"
+              KMSMasterKeyID: !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${EnvPrefix}-s3"
+            BucketKeyEnabled: true
+      NotificationConfiguration:
+        EventBridgeConfiguration:
+          EventBridgeEnabled: true
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  StagingBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Properties:
+      BucketName: !Sub "{{resolve:ssm:ProjPrefix}}-${EnvPrefix}-sf-to-dw-staging"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: "aws:kms"
+              KMSMasterKeyID: !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${EnvPrefix}-s3"
+            BucketKeyEnabled: true
+      NotificationConfiguration:
+        EventBridgeConfiguration:
+          EventBridgeEnabled: true
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # DynamoDB table for transformation rules
+  TransformationTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: "SerialNo"
+          AttributeType: "N" 
+      BillingMode: "PROVISIONED"
+      KeySchema: 
+        - AttributeName: "SerialNo"
+          KeyType: "HASH"
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 10
+      SSESpecification:
+        SSEEnabled: true
+      TableClass: "STANDARD"
+      TableName: !Sub '{{resolve:ssm:ProjPrefix}}-${EnvPrefix}-transformation-rules'
+      Tags:
+        - Key: "owner"
+          Value: "swm"
+
+  ProcessConfigTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: "SerialNo"
+          AttributeType: "N" 
+      BillingMode: "PROVISIONED"
+      KeySchema: 
+        - AttributeName: "SerialNo"
+          KeyType: "HASH"
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 10
+      SSESpecification:
+        SSEEnabled: true
+      TableClass: "STANDARD"
+      TableName: !Sub '{{resolve:ssm:ProjPrefix}}-${EnvPrefix}-process-config'
+      Tags:
+        - Key: "owner"
+          Value: "swm"
+
+  SalesforceObjectsDetailsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: "SerialNo"
+          AttributeType: "N" 
+      BillingMode: "PROVISIONED"
+      KeySchema: 
+        - AttributeName: "SerialNo"
+          KeyType: "HASH"
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 10
+      SSESpecification:
+        SSEEnabled: true
+      TableClass: "STANDARD"
+      TableName: !Sub '{{resolve:ssm:ProjPrefix}}-${EnvPrefix}-salesforce-objects-details'
+      Tags:
+        - Key: "owner"
+          Value: "swm"
+
+  TransformationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${EnvPrefix}TransformationGlueRole"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "glue.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        - PolicyName: !Sub "${EnvPrefix}TransformationGlueRolePolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Action:
+                  - "glue:*"
+                  - cloudwatch:PutMetricData
+                  - ec2:DescribeVpcEndpoints
+                  - ec2:DescribeRouteTables
+                  - ec2:CreateNetworkInterface
+                  - ec2:DeleteNetworkInterface
+                  - ec2:DescribeNetworkInterfaces
+                  - ec2:DescribeSecurityGroups
+                  - ec2:DescribeSubnets
+                  - ec2:DescribeVpcAttribute
+                  - iam:ListRolePolicies
+                  - iam:GetRole
+                  - iam:GetRolePolicy
+                Effect: Allow
+                Resource: "*"
+              - Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Effect: Allow
+                Resource:
+                  - "arn:aws:logs:*:*:/aws-glue/*"
+              - Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                  - s3:GetObjectTagging
+                Effect: Allow
+                Resource:
+                  - !Sub "arn:aws:s3:::{{resolve:ssm:ProjPrefix}}-${EnvPrefix}-sourcecode"
+                  - !Sub "arn:aws:s3:::{{resolve:ssm:ProjPrefix}}-${EnvPrefix}-sourcecode/*"
+                  - !Sub "arn:aws:s3:::{{resolve:ssm:ProjPrefix}}-${EnvPrefix}-sf-to-dw-curated"
+                  - !Sub "arn:aws:s3:::{{resolve:ssm:ProjPrefix}}-${EnvPrefix}-sf-to-dw-curated/*"
+              - Action:
+                  - s3:ListBucket
+                  - s3:GetObject
+                  - s3:GetObjectTagging
+                  - s3:PutObject
+                  - s3:PutObjectTagging
+                  - s3:DeleteObject
+                Effect: Allow
+                Resource:
+                  - !Sub "arn:aws:s3:::${MockDWBucket}"
+                  - !Sub "arn:aws:s3:::${MockDWBucket}/*"
+                  - !Sub "arn:aws:s3:::${StagingBucket}"
+                  - !Sub "arn:aws:s3:::${StagingBucket}/*"
+              - Action:
+                  - kms:Decrypt
+                  - kms:Encrypt
+                  - kms:GenerateDataKey
+                Effect: Allow
+                Resource: !Sub "{{resolve:ssm:/kms/arn/${EnvPrefix}-s3}}"
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:BatchGetItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                Resource:
+                  - !GetAtt TransformationTable.Arn
+                  - !GetAtt ProcessConfigTable.Arn
+                  - !GetAtt SalesforceObjectsDetailsTable.Arn
+              - Effect: Allow
+                Action:
+                  - ec2:CreateTags
+                  - ec2:DeleteTags
+                Condition:
+                  ForAllValues:StringEquals:
+                    aws:TagKeys:
+                      - aws-glue-service-resource
+                Resource:
+                  - arn:aws:ec2:*:*:network-interface/*
+                  - arn:aws:ec2:*:*:security-group/*
+                  - arn:aws:ec2:*:*:instance/*
+
+  TransformationJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Command:
+        Name: glueetl
+        ScriptLocation: !Sub 's3://{{resolve:ssm:ProjPrefix}}-${EnvPrefix}-sourcecode/glue/ConvertOP1Objects.py'
+      DefaultArguments:
+        "--extra-py-files": !Ref ExtraPyLibsS3Path
+      # Example:
+      #         "--job-bookmark-option": "job-bookmark-enable"
+      ExecutionProperty:
+        MaxConcurrentRuns: 1
+      MaxRetries: 0
+      Name: "TransformOP1Objects"
+      Role: !Ref TransformationRole
+      GlueVersion: "3.0"
+      WorkerType: "Standard"
+      NumberOfWorkers: 2
+

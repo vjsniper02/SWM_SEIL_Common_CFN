@@ -1,0 +1,193 @@
+trigger: none
+
+parameters:
+  - name: env
+    displayName: Environment
+    type: string
+    values:
+      - etldev
+      - sit
+      - uat
+      - prod
+  - name: costCenter
+    displayName: "Tag: Cost Center"
+    type: string
+    default: "7IT"
+    values:
+      - 7IT
+  - name: project
+    displayName: "Tag: Project"
+    type: string
+    default: "SWM Integration"
+  - name: role
+    displayName: "Tag: Role"
+    type: string
+    default: "Azure DevOps pipeline"
+  - name: repository
+    displayName: "Tag: Repository"
+    type: string
+    default: "SWM Integration"
+  - name: criticality
+    displayName: "Tag: Criticality"
+    type: string
+    default: "Critical"
+    values:
+      - Critical
+      - High
+      - Medium
+      - Low
+  - name: pii
+    displayName: "Tag: PII"
+    type: string
+    default: "no"
+    values:
+      - yes
+      - no
+  - name: securityClassification
+    displayName: "Tag: Security Classification"
+    type: string
+    default: "Critical"
+    values:
+      - Critical
+      - High
+      - Medium
+      - Low
+
+variables:
+  - name: serviceConnection
+    ${{ if in(parameters.env, 'etldev') }}:
+      value: AwsDev
+    ${{ elseif in(parameters.env, 'uat', 'sit') }}:
+      value: AwsNonProd
+    ${{ elseif in(parameters.env, 'prod') }}:
+      value: AwsProd
+  - name: region
+    value: ap-southeast-2
+
+stages:
+  - stage: ingestLambda
+    displayName: Deploy Ingest Lambda
+    jobs:
+      - template: ../templates/lambda-build.yaml
+        parameters:
+          lambda: sf-to-dw/ingest
+          env: ${{ parameters.env }}
+          serviceConnection: ${{ variables.serviceConnection }}
+      - job: updateStack
+        displayName: Deploy Ingest Stack
+        dependsOn: buildDeploy
+        variables:
+          lambdaVersion: $[ dependencies.buildDeploy.outputs['outputVersion.lambdaVersion'] ]
+        steps:
+          - task: CloudFormationCreateOrUpdateStack@1
+            displayName: Update Stack
+            inputs:
+              awsCredentials: ${{ variables.serviceConnection }}
+              regionName: ${{ variables.region }}
+              stackName: ${{ parameters.env }}-sf-to-dw-ingest
+              capabilityIAM: true
+              capabilityNamedIAM: true
+              capabilityAutoExpand: true
+              templateFile: cfn/templates/sf-to-dw/ingest.yaml
+              templateParametersSource: inline
+              templateParameters: |
+                - ParameterKey: EnvPrefix
+                  ParameterValue: ${{ parameters.env }}
+                - ParameterKey: LambdaVersion
+                  ParameterValue: $(lambdaVersion)
+              tags: |
+                CostCenter=${{ parameters.costCenter }}
+                Environment=${{ parameters.env }}
+                IACReleaseNumber=$(Build.SourceVersion)
+                LastUpdatedBy=$(Build.QueuedBy)
+                Project=${{ parameters.project }}
+                Role=${{ parameters.role }}
+                Repository=${{ parameters.repository }}
+                Criticality=${{ parameters.criticality }}
+                PII=${{ parameters.pii }}
+                SecurityClassification=${{ parameters.securityClassification }}
+
+  - stage: enableFlows
+    displayName: Enable Appflows
+    jobs:
+      - job: enableFlows
+        displayName: Enable flows
+        steps:
+          - task: CloudFormationCreateOrUpdateStack@1
+            displayName: Update Stack
+            inputs:
+              awsCredentials: ${{ variables.serviceConnection }}
+              regionName: ${{ variables.region }}
+              stackName: ${{ parameters.env }}-sf-to-dw-appflow
+              capabilityIAM: true
+              capabilityNamedIAM: true
+              capabilityAutoExpand: true
+              templateFile: cfn/templates/sf-to-dw/appflow.yaml
+              templateParametersSource: inline
+              templateParameters: |
+                - ParameterKey: EnvPrefix
+                  ParameterValue: ${{ parameters.env }}
+              tags: |
+                CostCenter=${{ parameters.costCenter }}
+                Environment=${{ parameters.env }}
+                IACReleaseNumber=$(Build.SourceVersion)
+                LastUpdatedBy=$(Build.QueuedBy)
+                Project=${{ parameters.project }}
+                Role=${{ parameters.role }}
+                Repository=${{ parameters.repository }}
+                Criticality=${{ parameters.criticality }}
+                PII=${{ parameters.pii }}
+                SecurityClassification=${{ parameters.securityClassification }}
+
+  - stage: etl
+    displayName: ETL Components
+    jobs:
+      - job: enableFlows
+        displayName: Deploy template
+        steps:
+          - task: SystemsManagerGetParameter@1
+            inputs:
+              awsCredentials: ${{ variables.serviceConnection }}
+              regionName: ${{ variables.region }}
+              readMode: single
+              parameterName: ProjPrefix
+              singleNameTransform: custom
+              customVariableName: projPrefix
+          - task: S3Upload@1
+            displayName: Upload extra libraries to S3
+            inputs:
+              awsCredentials: ${{ variables.serviceConnection }}
+              regionName: ${{ variables.region }}
+              bucketName: $(projPrefix)-${{ parameters.env }}-sourcecode
+              sourceFolder: resources/glue/extraLibs/
+              globExpressions: openpyxl.zip
+              targetFolder: glue-extra-libs
+              keyManagement: awsManaged
+              kmsMasterKeyId: alias/${{ parameters.env }}-s3
+          - task: CloudFormationCreateOrUpdateStack@1
+            displayName: Update Stack
+            inputs:
+              awsCredentials: ${{ variables.serviceConnection }}
+              regionName: ${{ variables.region }}
+              stackName: ${{ parameters.env }}-sf-to-dw-glue
+              capabilityIAM: true
+              capabilityNamedIAM: true
+              capabilityAutoExpand: true
+              templateFile: cfn/templates/sf-to-dw/glue.yaml
+              templateParametersSource: inline
+              templateParameters: |
+                - ParameterKey: EnvPrefix
+                  ParameterValue: ${{ parameters.env }}
+                - ParameterKey: ExtraPyLibsS3Path
+                  ParameterValue: s3://$(projPrefix)-${{ parameters.env }}-sourcecode/glue-extra-libs/openpyxl.zip
+              tags: |
+                CostCenter=${{ parameters.costCenter }}
+                Environment=${{ parameters.env }}
+                IACReleaseNumber=$(Build.SourceVersion)
+                LastUpdatedBy=$(Build.QueuedBy)
+                Project=${{ parameters.project }}
+                Role=${{ parameters.role }}
+                Repository=${{ parameters.repository }}
+                Criticality=${{ parameters.criticality }}
+                PII=${{ parameters.pii }}
+                SecurityClassification=${{ parameters.securityClassification }}

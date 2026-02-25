@@ -1,0 +1,208 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: Demo stack for file ingestion
+
+Parameters:
+  EnvPrefix:
+    Type: String
+    Description: Environment Name as Prefix
+
+  AccountPrefix:
+    Description: Account Name as Prefix
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /account/name
+
+  LambdaVersion:
+    # TODO This is not currently environment aware, needs more thought on how to read this param
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /versions/demo/IngestLambda
+
+Resources:
+  # S3 bucket to handle ingestion
+  LandingBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Properties:
+      BucketName: !Sub "{{resolve:ssm:ProjPrefix}}-${EnvPrefix}-demo-landing"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: "aws:kms"
+              KMSMasterKeyID: !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${EnvPrefix}-s3"
+            BucketKeyEnabled: true
+      NotificationConfiguration:
+        EventBridgeConfiguration:
+          EventBridgeEnabled: true
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # Creates a bus specific to this integration for traceability
+  EventBus:
+    Type: AWS::Events::EventBus
+    Properties:
+      Name: !Sub ${EnvPrefix}-demo
+
+  # Log group for this bus
+  EventBusLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/events/${EnvPrefix}-demo"
+      RetentionInDays: 14
+
+  # Log any events seen on this integration bus to CloudWatch logs
+  EventBusLogging:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub ${EnvPrefix}-demo-logging
+      Description: "Forward all events on demo bus to cloud watch logs"
+      EventBusName: !Ref EventBus
+      State: "ENABLED"
+      EventPattern:
+        source:
+          - exists: true
+      Targets:
+        - Arn: !GetAtt EventBusLogGroup.Arn
+          Id: "DemoEvents"
+
+  # Forward S3 events to demo bus so that we handle all events in one place
+  EventRuleDefaultToBus:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub ${EnvPrefix}-demo-s3-create
+      Description: "Routes s3 create to demo bus"
+      EventBusName: default
+      State: "ENABLED"
+      EventPattern:
+        source: [ aws.s3 ]
+      detail:
+        bucket:
+          name: [ !Ref LandingBucket ]
+      Targets:
+        - Arn: !GetAtt EventBus.Arn
+          Id: "DefaultToDemoBus"
+          RoleArn: !GetAtt EventBridgeIAMrole.Arn
+
+  # IAM Policy to allow the forwarding of events
+  EventBridgeIAMrole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${EnvPrefix}DemoEventBridgeForwarding
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: !Sub ${EnvPrefix}DemoEventBridgeForwarding
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - events:PutEvents
+                Resource:
+                  - !GetAtt EventBus.Arn
+
+  # This is the rule that triggers our ingestion lambda
+  IngestRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: s3-create-ingest-lambda
+      Description: Trigger Ingest lambda on s3:create
+      EventBusName: !Ref EventBus
+      EventPattern:
+        source: [ aws.s3 ]
+        detail-type: [ Object Created ]
+        detail:
+          bucket:
+            name: [ !Ref LandingBucket ]
+          object:
+            key:
+              - prefix: "in/"
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt IngestLambda.Arn
+          Id: !Sub "${EnvPrefix}-demo-ingest"
+
+  # Permission for EventBridge to invoke ingestion lambda
+  EventBridgeLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt IngestLambda.Arn
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt IngestRule.Arn
+
+  # The lambda itself
+  IngestLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${EnvPrefix}-demo-ingest"
+      PackageType: Image
+      Timeout: 30
+      Environment:
+        Variables:
+          EVENT_BUS: !Ref EventBus
+      TracingConfig:
+        Mode: Active
+      Code:
+        ImageUri: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${EnvPrefix}-demo-ingest:${LambdaVersion}"
+      Role: !GetAtt IngestLambdaExecutionRole.Arn
+      Tags:
+        - Key: "version"
+          Value: !Ref LambdaVersion
+
+  # Execution role for lambda
+  IngestLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${EnvPrefix}DemoIngest"
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+      Policies:
+        - PolicyName: !Sub "${EnvPrefix}DemoIngest"
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Effect: Allow
+                Resource:
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${EnvPrefix}-demo-ingest:*"
+              - Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
+                Effect: Allow
+                Resource: "*"
+              - Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                Effect: Allow
+                Resource:
+                  - !Sub "arn:aws:s3:::${LandingBucket}/*"
+              - Action:
+                  - kms:Decrypt
+                  - kms:Encrypt
+                  - kms:GenerateDataKey
+                Effect: Allow
+                # TODO an alias here doesn't work, either an SSM param or some IAM magic needed
+                Resource: !Sub arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/67bc299d-a665-42c3-8a8c-9ca93015054c
+              - Effect: Allow
+                Action:
+                  - events:PutEvents
+                Resource:
+                  - !GetAtt EventBus.Arn

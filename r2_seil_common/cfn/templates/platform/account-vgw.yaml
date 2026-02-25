@@ -1,0 +1,72 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+  This template deploys a Virtaul Gateway Appliance (VGW) using the provided ASN number
+  from the customer. This is required to connect the account to the direct connect link.
+
+Parameters:
+  AccountPrefix:
+    Description: Account Name as Prefix
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /account/name
+
+  VpcID:
+    Description: VPC ID
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /networking/vpc/id
+
+  PrivateRouteTable1:
+    Description: Private route table 1 ID
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /networking/privateroutetable1/id
+
+  PrivateRouteTable2:
+    Description: Private route table 2 ID
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /networking/privateroutetable2/id
+
+  PrivateRouteTable3:
+    Description: Private route table 3 ID
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /networking/privateroutetable3/id
+  
+  VGWAsn:
+    Description: The private autonomous system number (ASN) for the BGP session
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /networking/virtualgateway/asn
+
+Resources:
+  VirtualGateway:
+    Type: AWS::EC2::VPNGateway
+    Properties:
+      AmazonSideAsn: !Ref VGWAsn
+      Type: ipsec.1
+      Tags:
+        - Key: Name
+          Value: !Sub ${AccountPrefix}-vgw
+
+  AttachVGW:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: 
+        Ref: VpcID
+      VpnGatewayId: !Ref VirtualGateway
+
+  RoutePropagation:
+    Type: AWS::EC2::VPNGatewayRoutePropagation
+    Properties:
+       RouteTableIds: 
+        - !Ref PrivateRouteTable1
+        - !Ref PrivateRouteTable2
+        - !Ref PrivateRouteTable3
+       VpnGatewayId: !Ref VirtualGateway
+
+  # Output to parameter store
+  VGWparameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /networking/virtualgateway/id
+      Description: VGW ID
+      Type: String
+      Value: !Ref VirtualGateway
+      Tags:
+        Name: !Sub ${AccountPrefix}-VGW-ID

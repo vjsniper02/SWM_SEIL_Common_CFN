@@ -1,0 +1,72 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: This stack contains all the S3 buckets used by AWS services
+
+# This is for environment-wide S3 buckets.  It is not the place to put any S3 buckets that are specific to an
+# integration, they should live within the integration's own stacks
+
+Parameters:
+  EnvPrefix:
+    Type: String
+    Default: "dev"
+    Description: Environment Name as Prefix
+
+Resources:
+  sourcecodeS3Bucket:
+    # Bucket to store source code, eg Glue source codes
+    Type: 'AWS::S3::Bucket'
+    # DeletionPolicy: Retain
+    DeletionPolicy: Delete
+    Properties: # TODO: Review versioning, delete protection and other properties
+      BucketName: !Sub '{{resolve:ssm:ProjPrefix}}-${EnvPrefix}-sourcecode'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'aws:kms'
+              KMSMasterKeyID: !Sub arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${EnvPrefix}-s3
+            BucketKeyEnabled: true
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: TRUE
+        BlockPublicPolicy: TRUE
+        IgnorePublicAcls: TRUE
+        RestrictPublicBuckets: TRUE
+
+  eventsS3Bucket:
+    # Bucket to store events larger than 256kb should they occur
+    Type: 'AWS::S3::Bucket'
+    DeletionPolicy: Delete
+    Properties:
+      BucketName: !Sub '{{resolve:ssm:ProjPrefix}}-${EnvPrefix}-events'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'aws:kms'
+              KMSMasterKeyID: !Sub arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${EnvPrefix}-s3
+            BucketKeyEnabled: true
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: TRUE
+        BlockPublicPolicy: TRUE
+        IgnorePublicAcls: TRUE
+        RestrictPublicBuckets: TRUE
+
+  eventsS3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref eventsS3Bucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowAppFlowAccess
+            Action:
+              - s3:PutObject
+              - s3:GetBucketAcl
+              - s3:PutObjectAcl
+              - s3:AbortMultipartUpload
+              - s3:ListMultipartUploadParts
+              - s3:ListBucketMultipartUploads
+            Effect: Allow
+            Resource:
+              - !GetAtt eventsS3Bucket.Arn
+              - !Sub '${eventsS3Bucket.Arn}/*'
+            Principal:
+              Service: appflow.amazonaws.com

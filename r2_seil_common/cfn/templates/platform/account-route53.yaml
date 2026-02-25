@@ -1,0 +1,45 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Configure a public DNS Zone
+
+Parameters:
+  DomainSuffix:
+    Description: Zone DNS suffix
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /networking/route53/zonename
+
+Resources:
+  HostedZone:
+    Type: AWS::Route53::HostedZone
+    Properties:
+      Name: !Sub ${DomainSuffix}
+      HostedZoneTags:
+        - Key: Name
+          Value: !Sub ${DomainSuffix}
+
+  HostedZoneIdParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /networking/route53/id
+      Description: Route 53 
+      Type: String
+      Value: !Ref HostedZone
+      Tags:
+        Name: !Sub ${DomainSuffix}-id
+
+  txtrecord:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      Comment: Creating txt records for the SPF and DMARC record
+      HostedZoneId : !Ref HostedZone
+      RecordSets:
+      - Name: !Sub ${DomainSuffix}
+        ResourceRecords:
+        - '"v=spf1 -all"'
+        TTL: 300
+        Type: TXT
+      - Name: !Sub _dmarc.${DomainSuffix}
+        ResourceRecords:
+        - '"v=DMARC1; p=reject; rua=mailto:f56bcb2af4db409@rep.dmarcanalyzer.com; ruf=mailto:f56bcb2af4db409@for.dmarcanalyzer.com; fo=1;"'
+        TTL: 300
+        Type: TXT
+    

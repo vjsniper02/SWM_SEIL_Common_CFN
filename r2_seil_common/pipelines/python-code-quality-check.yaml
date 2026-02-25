@@ -1,0 +1,17 @@
+trigger: none
+
+parameters:
+  - name: banditConfigFile
+    displayName: Bandit Config File
+    type: string
+    values:
+      - bandit.yaml
+  - name: folderToCheck
+    displayName: Folder to Check
+    type: string
+    values:
+      - "."
+
+steps: 
+  - script: docker run --rm -v $PWD:/build -w /build python:3.9 ./python-code-check.sh ${{ parameters.banditConfigFile }} ${{ parameters.folderToCheck }}
+    displayName: Python Code Quality Check

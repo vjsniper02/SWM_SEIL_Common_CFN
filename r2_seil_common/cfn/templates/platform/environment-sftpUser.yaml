@@ -1,0 +1,124 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: |
+  This stack creates SFTP Users, the IAM Role they assume, and an S3 Bucket to back the storage.
+  It also contains an EventBridge Rule to send notification to an SNS Topic.
+
+Parameters:
+  AccountPrefix:
+    Description: Account Name as Prefix
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /account/name
+
+  EnvPrefix:
+    Type: String
+    Default: "dev"
+    Description: Environment Name as Prefix
+
+  SftpUserSshKeys:
+    Type: AWS::SSM::Parameter::Value<List<String>>
+    Default: /sftp/userSshKeys
+
+Resources:
+  # Multiple users can be created and restricted to a specific path so that a single S3 bucket can be shared.
+  # Alternatively we can have multiple S3 buckets, since they cost nothing extra (although, taking consideration of max S3 buckets).
+  SftpUser:
+    Type: AWS::Transfer::User
+    Properties:
+      # Restrict user to a specific S3 path. Userful when multiple users are sharing one S3 bucket.
+      HomeDirectoryMappings:
+      - Entry: /
+        Target: !Sub /${SftpBucket}/SftpUser
+      HomeDirectoryType: LOGICAL
+      Role: !GetAtt SftpUserRole.Arn
+      ServerId:
+        Fn::ImportValue:
+          !Sub ${AccountPrefix}-sftp-server-id
+      SshPublicKeys: !Ref SftpUserSshKeys
+      UserName: "SftpUser"
+
+  SftpUserRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - transfer.amazonaws.com
+          Action:
+          - 'sts:AssumeRole'
+      Policies:
+      # TODO: tighten permission. KMS permissions are required for encrypted buckets, might need to split into two policies to scope down the Resource and Condition
+      - PolicyName: root
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+          - Effect: Allow
+            Action: [ 's3:*', 'kms:Decrypt', 'kms:Encrypt', 'kms:GenerateDataKey' ]
+            Resource: '*'
+
+  SnsTopic:
+    Type: AWS::SNS::Topic
+
+  SnsTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      PolicyDocument:
+        Id: Allow-EventBridge-Invoke
+        Version: '2012-10-17'
+        Statement:
+        - Sid: allow
+          Effect: Allow
+          Principal:
+            Service:
+            - events.amazonaws.com
+          Action: sns:Publish
+          Resource: !Ref SnsTopic
+      Topics:
+      - !Ref SnsTopic
+
+  # Example email subscription to receive file upload notification
+  # Subscription1:
+  #   Type: AWS::SNS::Subscription
+  #   Properties:
+  #     Endpoint: foo@bar.com
+  #     Protocol: email
+  #     TopicArn: !Ref SnsTopic
+
+  SftpBucket:
+    Type: 'AWS::S3::Bucket'
+    DeletionPolicy: Delete
+    Properties:
+      BucketName: !Sub '{{resolve:ssm:ProjPrefix}}-${EnvPrefix}-sftp'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: 'aws:kms'
+            KMSMasterKeyID: !Sub arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${EnvPrefix}-s3
+          BucketKeyEnabled: true
+      NotificationConfiguration:
+        EventBridgeConfiguration:
+          EventBridgeEnabled: true
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: TRUE
+        BlockPublicPolicy: TRUE
+        IgnorePublicAcls: TRUE
+        RestrictPublicBuckets: TRUE
+
+  # Maybe we can create multiple rules to route events to different SNS topics using prefix in the event pattern
+  # https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-event-patterns.html
+  Rule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventPattern:
+        source: [aws.s3]
+        detail-type: [Object Created]
+        detail:
+          bucket:
+            name: [!Ref SftpBucket]
+      State: ENABLED
+      Targets:
+      - Arn: !Ref SnsTopic
+        Id: sftp-rule-target-1

@@ -1,0 +1,106 @@
+parameters:
+  - name: lambda
+    type: string
+  - name: env
+    type: string
+  - name: serviceConnection
+    type: string
+  - name: jobName
+    type: string
+    default: buildDeploy
+  - name: dependsOn
+    type: object
+    default: []
+
+jobs:
+  - job: ${{ parameters.jobName }}
+    dependsOn: ${{ parameters.dependsOn }}
+    displayName: Test & Build Lambda
+    variables: 
+      - name: lambdaName
+        value: ${{ replace(parameters.lambda, '/', '-') }}
+      - group: "AWS_INTEGRATION"
+      - name: vsafetyAPIkey
+        value: $[variables.safetyAPIkey]
+
+    steps:
+      - task: Bash@3
+        name: codeQuality
+        displayName: Code quality checks
+        inputs:
+          targetType: inline
+          script: |
+            set -euo pipefail
+            docker run --rm -v $PWD:/build -w /build python:3.9 ./python-code-check.sh bandit.yaml lambda/${{ parameters.lambda }} $(vsafetyAPIkey)
+
+      - task: Bash@3
+        name: installDeps
+        displayName: Install build dependencies
+        inputs:
+          targetType: inline
+          script: |
+            set -euo pipefail
+            pip3 install poetry==1.1.15 invoke==1.6.0 toml==0.10.2
+
+      - task: Bash@3
+        name: getSha
+        displayName: Get Git shortSha
+        inputs:
+          targetType: inline
+          script: |
+            set -euo pipefail
+            echo "##vso[task.setvariable variable=shortSha]$(git rev-parse --short HEAD)"
+            echo "[task.setvariable variable=shortSha]$(git rev-parse --short HEAD)"
+
+      - task: PythonScript@0
+        name: getVersion
+        displayName: Get Version
+        inputs:
+          scriptSource: inline
+          script: |
+            import toml
+            with open("lambda/${{ parameters.lambda }}/pyproject.toml") as f:
+              ver = toml.load(f)["tool"]["poetry"]["version"]
+              print(f"##vso[task.setvariable variable=tagVersion]{ver}-$(shortSha)")
+              print(f"[task.setvariable variable=tagVersion]{ver}-$(shortSha)")
+
+      - task: Bash@3
+        name: dockerBuild
+        displayName: Docker Build
+        inputs:
+          targetType: inline
+          script: |
+            set -exuo pipefail
+            ver=$(tagVersion)
+            cd lambda
+            inv build --fn ${{ parameters.lambda }} \
+              --dockertag ${{ parameters.env }}-${{ variables.lambdaName }}:${ver} \
+              --reportsdir $(Pipeline.Workspace)/TestResults
+
+      - task: PublishBuildArtifacts@1
+        inputs:
+          pathToPublish: $(Pipeline.Workspace)/TestResults
+          artifactName: $(lambdaName)-TestResults
+
+      - task: ECRPushImage@1
+        name: push
+        displayName: Push Lambda to ECR
+        inputs:
+          awsCredentials: ${{ parameters.serviceConnection }}
+          regionName: $(region)
+          imageSource: imagename
+          sourceImageName: ${{ parameters.env }}-${{ variables.lambdaName }}
+          sourceImageTag: $(tagVersion)
+          repositoryName: ${{ parameters.env }}-${{ variables.lambdaName }}
+          pushTag: $(tagVersion)
+          autoCreateRepository: false
+
+      - task: Bash@3
+        name: outputVersion
+        displayName: Ouput Built Version
+        inputs:
+          targetType: inline
+          script: |
+            set -euo pipefail
+            echo "##vso[task.setvariable variable=lambdaVersion;isOutput=true]$(tagVersion)"
+            echo "[task.setvariable variable=lambdaVersion;isOutput=true]$(tagVersion)"

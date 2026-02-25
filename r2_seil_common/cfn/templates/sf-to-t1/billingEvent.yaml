@@ -1,0 +1,181 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: Salesforce to Tech1 billing
+
+Parameters:
+  EnvPrefix:
+    Type: String
+    Description: Environment Name as Prefix
+
+  AccountPrefix:
+    Description: Account Name as Prefix
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /account/name
+
+  LambdaVersion:
+    Description: Version of the billing export handler to deploy
+    Type: String
+
+Resources:
+  # App Flow to consume Salesforce event
+  BillingExportEventFlow:
+    Type: AWS::AppFlow::Flow
+    Properties:
+      FlowName: !Sub '${EnvPrefix}-SalesforceEvents-BillingExtractReady__e'
+      Description: Test event flow for CloudFormation from salesforce to EventBridge
+      TriggerConfig:
+        TriggerType: Event
+      SourceFlowConfig:
+        ConnectorType: Salesforce
+        ConnectorProfileName: !Sub '{{resolve:ssm:/${EnvPrefix}/salesforce/connectorName}}'
+        SourceConnectorProperties:
+          Salesforce:
+            Object: BillingExtractReady__e
+      DestinationFlowConfigList:
+        - ConnectorType: EventBridge
+          DestinationConnectorProperties:
+            EventBridge:
+              Object: !Sub 'aws.partner/appflow/salesforce.com/${AWS::AccountId}/${EnvPrefix}-salesforce-events-BillingExtractReady__e'
+              ErrorHandlingConfig:
+                FailOnFirstError: false
+                BucketName: !Sub '{{resolve:ssm:ProjPrefix}}-${EnvPrefix}-events'
+                BucketPrefix: 'BillingExtractReady__e/'
+      Tasks:
+        - TaskType: Map_all
+          SourceFields: [ ]
+          TaskProperties:
+            - Key: EXCLUDE_SOURCE_FIELDS_LIST
+              Value: "[]"
+
+  # Partner event bus to receive BillingExtractReady__e
+  PartnerEventBus:
+    Type: AWS::Events::EventBus
+    Properties:
+      EventSourceName: !Sub 'aws.partner/appflow/salesforce.com/${AWS::AccountId}/${EnvPrefix}-salesforce-events-BillingExtractReady__e'
+      Name: !Sub 'aws.partner/appflow/salesforce.com/${AWS::AccountId}/${EnvPrefix}-salesforce-events-BillingExtractReady__e'
+    DependsOn: BillingExportEventFlow
+
+  # Call custom resource to activate event flow
+  ActivateFlows:
+    Type: AWS::CloudFormation::CustomResource
+    DependsOn: BillingExportEventFlow
+    Properties:
+      ServiceToken: !Sub '{{resolve:ssm:/${AccountPrefix}/cfn-cr-lambda/activateflows}}'
+      FlowName: !Ref BillingExportEventFlow
+
+  # Log group for this bus
+  EventBusLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/events/${EnvPrefix}-sf-to-t1_BillingExtractReady__e"
+      RetentionInDays: 14
+
+  # Log any events seen on this integration bus to CloudWatch logs
+  EventBusLogging:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub "${EnvPrefix}-sf-to-t1-logging"
+      Description: "Forward all events on sf-to-t1 bus to cloud watch logs"
+      EventBusName: !Ref PartnerEventBus
+      State: "ENABLED"
+      EventPattern:
+        source:
+          - exists: true
+      Targets:
+        - Arn: !GetAtt EventBusLogGroup.Arn
+          Id: "SfToT1Events"
+
+  # This is the rule that triggers our lambda
+  BillingExtractLambdaRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub "${EnvPrefix}-sf-to-t1-billing-lambda"
+      Description: Trigger billing extract lambda on event
+      EventBusName: !Sub 'aws.partner/appflow/salesforce.com/${AWS::AccountId}/${EnvPrefix}-salesforce-events-BillingExtractReady__e'
+      State: ENABLED
+      EventPattern:
+        source:
+          - !Sub 'aws.partner/appflow/salesforce.com/${AWS::AccountId}/${EnvPrefix}-salesforce-events-BillingExtractReady__e'
+      Targets:
+        - Arn: !GetAtt BillingLambda.Arn
+          Id: !Sub "${EnvPrefix}-sf-to-t1-billing"
+
+  # Permission for EventBridge to invoke lambda
+  EventBridgeLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt BillingLambda.Arn
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt BillingExtractLambdaRule.Arn
+
+  # The lambda itself
+  BillingLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${EnvPrefix}-sf-to-t1-billing"
+      PackageType: Image
+      Timeout: 180
+      Environment:
+        Variables:
+          BATCH_SIZE: 5000
+          ENVIRONMENT: !Sub "${EnvPrefix}"
+      TracingConfig:
+        Mode: Active
+      Code:
+        ImageUri: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${EnvPrefix}-sf-to-t1-billing:${LambdaVersion}"
+      Role: !GetAtt BillingLambdaExecutionRole.Arn
+      Tags:
+        - Key: "version"
+          Value: !Ref LambdaVersion
+        - Key: "env"
+          Value: !Sub ${EnvPrefix}
+
+  # Execution role for lambda
+  BillingLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${EnvPrefix}SfToT1Billing"
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+      Policies:
+        - PolicyName: !Sub "${EnvPrefix}SfToT1Billing"
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Effect: Allow
+                Resource:
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${EnvPrefix}-sf-to-t1-billing:*"
+              - Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
+                Effect: Allow
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - lambda:ListTags
+                Resource:
+                  - !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:*"
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource:
+                  - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${EnvPrefix}/sf/*'
+                  - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${EnvPrefix}/tech1/*'
+
+  # Log group for the lambda
+  LambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${EnvPrefix}-sf-to-t1-billing"
+      RetentionInDays: 14

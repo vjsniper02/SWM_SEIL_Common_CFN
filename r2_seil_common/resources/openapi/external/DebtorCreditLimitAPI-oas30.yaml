@@ -1,0 +1,308 @@
+openapi: "3.0.1"
+info:
+  title: Debtor-LiveRemainingCreditLimit-API
+  description: >-
+
+    # Introduction
+
+
+    <table><tbody><tr><td class = 'into_api' style='border:none;padding:0 0 0
+    0'><p>The purpose of this API is to retrieve debtor live remaining credit limit from Technology One</p></td></tr></tbody></table>
+
+
+    # Features
+
+
+    LiveRemainingCreditLimit API provides the below features.
+
+    1. Get Debtor's Live Remaining Credit Limit from Technology One
+
+    # Getting Access to the API
+
+    1. Reach out to TBD to get access to this API.
+
+
+    Now head over to **Getting Started** where you can find more details about
+    the API.
+
+
+    # Getting Started
+
+
+    Below are the steps to invoke this API.
+      1. Generate authorizer token.
+      2. Use retreived token within expiry window in header for all call to this API
+
+
+    # Frequently Asked Questions
+
+
+    **Q: How can i get support for this API?**
+
+
+    A. TBD
+  version: 1.0.0
+servers:
+- url: "https://tbd/{basePath}"
+  variables:
+    basePath:
+      default: "v1"
+  description: API dev
+paths:
+  /techone/debtor/{debtor-number}/remaining-credit-limit:
+    get:
+      tags:
+        - Get Live Remaining Credit Limit for a given Debtor
+      summary: Get Live Remaining Credit Limit for a given Debtor
+      description: |
+        Get Live Remaining Credit Limit for a given Debtor from Technology One
+      parameters:
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          description: All responses from the service contain an X-Correlation-Id header containing a unique GUID per request. If the request contains an X-Correlation-Id HTTP Header the service will use this value, otherwise it will generate a new correlation id. The correlation id is a GUID in 8-4-4-12 format.
+          schema:
+            type: string
+        - name: X-Application-Label
+          in: header
+          required: false
+          description: Application label to uniquely identify source system
+          schema:
+            type: string
+        - name: debtor-number
+          in: path
+          required: true
+          description: Debtor Number
+          schema:
+            type: string
+      security:
+      - API-CustomAuthoriser: []
+      responses:
+        '200':
+          description: successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TechOneDebtorCreditLimitResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse400'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+        '404':
+          description: Not Foound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+        '500':
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse500'
+        default:
+          description: any error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseDefault'
+components:
+  securitySchemes:
+    API-CustomAuthoriser:
+      type: "apiKey"
+      name: "Authorization"
+      in: "header"
+      x-amazon-apigateway-authtype: "custom"
+  schemas:
+    ServiceResponse:
+      type: object
+      properties:
+        applicationLabel:
+          type: string
+          description: api consumer name mapped from request header parameter
+          example: salesforce
+        time:
+          type: string
+          description: response time sent by api/microservice
+          example: 2021-10-04T10:54:24.792+1000
+        correlationId:
+          type: string
+          description: correlation id sent in request from header
+          example: f8443d84-3cce-4b56-8a8e-328fe77158a7
+    ErrorResponse500:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+          description: Mandatory. Http Code
+          example: 500
+        applicationLabel:
+          type: string
+          description: Mandatory. Application label of consuming application
+          example: salesforce
+        time:
+          type: string
+          format: date-time
+          description: Mandatory. The date and time when the message was received by recipient.
+          example: '2021-10-04T10:54:24.792+1000'
+        correlationId:
+          type: string
+          description: Mandatory. Correlation id of the message received
+          example: f8443d84-3cce-4b56-8a8e-328fe77158a7
+        message:
+          type: string
+          description: Optional. failure/exception short message
+          example: Internal server error
+        status:
+          type: string
+          description: Optional. application error code in case of successful response.
+          example: EC001
+        errors:
+          type: array
+          description: Optional.
+          items:
+            $ref: '#/components/schemas/ErrorsObject'
+    ErrorsObject:
+      type: object
+      properties:
+        code:
+          type: string
+          example: "DS501"
+        message:
+          type: string
+          example: Downstream not available
+    ErrorResponse404:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: http code
+          example: 404
+        message:
+          type: string
+          description: Optional.
+          example: Not Found
+        status:
+          type: string
+          description: Optional.
+          example: 404000
+    ErrorResponse400:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: Mandatory, http code
+          example: 400
+        message:
+          type: string
+          description: Optional. failure/exception short message
+          example: Bad Request
+        status:
+          type: string
+          description: Optional. application error code in case of successful response.
+          example: 400301
+        errors:
+          type: array
+          description: Optional.
+          items:
+            $ref: '#/components/schemas/ReservationDetailsError'
+    ReservationDetailsError:
+      type: object
+      properties:
+        code:
+          $ref: '#/components/schemas/ReservationDetailsError.Reason'
+        message:
+          type: string
+          example: TBD
+    ReservationDetailsError.Reason:
+      type: string
+      description: The reasons for the target error.
+      enum:
+        - UNLIMITED_UNITS_BOUGHT_NOT_ALLOWED
+        - UNLIMITED_END_DATE_TIME_NOT_ALLOWED
+        - PERCENTAGE_UNITS_BOUGHT_TOO_HIGH
+        - DURATION_NOT_ALLOWED
+        - UNIT_TYPE_NOT_ALLOWED
+        - COST_TYPE_NOT_ALLOWED
+        - COST_TYPE_UNIT_TYPE_MISMATCH_NOT_ALLOWED
+        - LINE_ITEM_TYPE_NOT_ALLOWED
+        - NETWORK_REMNANT_ORDER_CANNOT_UPDATE_LINEITEM_TYPE
+        - BACKFILL_WEBPROPERTY_CODE_NOT_ALLOWED
+        - UNKNOWN
+      example: UNLIMITED_UNITS_BOUGHT_NOT_ALLOWED
+    ErrorResponse401:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Unauthorised
+    ErrorResponse403:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Forbidden
+    ErrorResponseDefault:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+          description: Mandatory. Http Code
+          example: 500
+        message:
+          type: string
+          example: Internal server error
+    TechOneDebtorCreditLimitData:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Message Code from TechOne
+          example: 'BPPR0140'
+        remaining_credit_limit:
+          type: number
+          description: Debtor Remaining Credit Limit
+          example: 1597.14
+        notification_type:
+          type: string
+          description: Notification Type from TechOne
+          example: 'Information'
+    TechOneDebtorCreditLimitResponse:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: http code
+          example: 200
+        message:
+          type: string
+          description: Optional.
+          example: success
+        status:
+          type: string
+          description: Optional.
+          example: 200000
+        data:
+          $ref: '#/components/schemas/TechOneDebtorCreditLimitData'

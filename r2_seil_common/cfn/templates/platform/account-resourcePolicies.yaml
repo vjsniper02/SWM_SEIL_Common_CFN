@@ -1,0 +1,13 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: Account level resource policies
+
+Resources:
+
+  # Allows EventBridge access to write logs
+  TrustEventsToStoreLogEvents:
+    Type: AWS::Logs::ResourcePolicy
+    Properties:
+      PolicyName: TrustEventsToStoreLogEvents
+      PolicyDocument:
+        !Sub "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"TrustEventsToStoreLogEvent\",\"Effect\":\"Allow\",\"Principal\":{\"Service\":[\"delivery.logs.amazonaws.com\",\"events.amazonaws.com\"]},\"Action\":[\"logs:CreateLogStream\",\"logs:PutLogEvents\"],\"Resource\":\"arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/events/*:*\"}]}"

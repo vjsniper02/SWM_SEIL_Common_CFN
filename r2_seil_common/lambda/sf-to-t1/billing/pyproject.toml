@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "billing"
+version = "0.1.0"
+description = ""
+authors = ["Tom Taylor <tom.taylor@contino.io>"]
+
+[tool.poetry.dependencies]
+python = "~3.9"
+suds = "^1.1.2"
+attrs = "^21.4.0"
+simple-salesforce = "^1.11.6"
+core = { path = "../../../lib/common", develop = true }
+salesforce-core = { path = "../../../lib/salesforce", develop = true }
+tech1_ci =  { path = "../../../lib/tech1-ci", develop = true }
+dependency-injector = "^4.39.1"
+aws-xray-sdk = "^2.10.0"
+boto3 = "^1.24.34"
+cryptography = "^38.0.0"
+
+[tool.poetry.dev-dependencies]
+pytest = "=7.1.2"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

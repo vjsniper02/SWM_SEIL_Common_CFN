@@ -1,0 +1,61 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+  Demo stack for a hello world lambda
+
+Parameters:
+  EnvPrefix:
+    Type: String
+    Description: Environment Name as Prefix
+  LambdaVersion:
+    Type: String
+    Description: Lambda image tag
+
+Resources:
+  Lambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${EnvPrefix}-demo-hello"
+      PackageType: Image
+      Timeout: 30
+      TracingConfig:
+        Mode: Active
+      Code:
+        ImageUri: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/dev-demo-hello:${LambdaVersion}"
+      Environment:
+        Variables:
+          AWS_REGION: "${AWS::Region}"
+          ENVIRONMENT: "${EnvPrefix}"
+      Role: !GetAtt LambdaRole.Arn
+      Tags:
+        - Key: "version"
+          Value: !Ref LambdaVersion
+
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      Policies:
+        - PolicyName: !Sub "${EnvPrefix}HelloFunc"
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Effect: Allow
+                Resource:
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${EnvPrefix}-demo-hello:*"
+              - Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
+                Effect: Allow
+                Resource: '*'

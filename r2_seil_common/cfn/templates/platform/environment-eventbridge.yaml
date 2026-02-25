@@ -1,0 +1,15 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+  This stack contains all of the ECRs that are needed per environment.
+  The idea is that repo names match the lamba name i.e. <env>-<some-parent-name>-<name>
+
+Parameters:
+  EnvPrefix:
+    Type: String
+    Description: Environment Name as Prefix
+
+Resources:
+  DeliveryReportingEventBus:
+    Type: AWS::Events::EventBus
+    Properties:
+      Name: !Join ["-", [!Ref EnvPrefix, "gam-to-sf-delivery-reporting"]]

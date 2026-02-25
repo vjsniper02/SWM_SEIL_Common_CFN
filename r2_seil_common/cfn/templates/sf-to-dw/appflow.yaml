@@ -1,0 +1,65 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: |
+  This stack creates an AppFlow Flow and supporting resources. To add more flows for more Salesforce objects, add them to AppFlowMultiply properties.
+
+Parameters:
+  AccountPrefix:
+    Description: Account Name as Prefix
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /account/name
+
+  EnvPrefix:
+    Type: String
+    Default: dev
+    Description: Environment Name as Prefix
+
+Transform:
+  - AppFlowMultiply
+
+Resources:
+  AppFlow:
+    Type: AWS::AppFlow::Flow
+    # AppFlowMultiply needs to be hardcoded, comma delimited string of Salesforce Object names in this format: {Display Name|Object Name}
+    # Where, Display Name is the human friendly name, and Object Name is the internal Salesforce name, separated by a pipe |.
+    # When Display Name and Object Name are the same, only one is required. e.g.: 
+    AppFlowMultiply: Account,Order,Product|Product2,User,Opportunity,Order Product|OrderItem,Order Ad Placement|vlocity_cmt__OrderItemAdPlacement__c,Contract,Quote,PriceList|vlocity_cmt__PriceList__c,Ad Space Specification|AdSpaceSpecification,Ad Space Creative Size Type|AdSpaceCreativeSizeType,Ad Creative Size Type|AdCreativeSizeType,Invoice|blng__Invoice__c,InvoiceLine|blng__InvoiceLine__c,Credit Note Allocation|blng__CreditNoteAllocation__c,Contact,Quote Line Item|QuoteLineItem,Activity Code|SWM_Activity_Code__c,Ad Order Item|AdOrderItem,Quote Pricing|vlocity_cmt__QuotePricingAdjustment__c,Quote Discount|vlocity_cmt__QuoteDiscount__c,Quote Discount Pricing|vlocity_cmt__QuoteDiscountPricing__c,Opportunity Product Relationship|vlocity_cmt__OpportunityLineItemRelationship__c,Opportunity Product|OpportunityLineItem,Opportunity Team Member|OpportunityTeamMember,Opportunity Contact Role|OpportunityContactRole,Targeting|Targeting__c,Usage Summary|blng__UsageSummary__c
+    Properties:
+      DestinationFlowConfigList:
+      - ConnectorType: S3
+        DestinationConnectorProperties:
+          S3:
+            BucketName: !Sub '{{resolve:ssm:ProjPrefix}}-${EnvPrefix}-sf-to-dw-landing'
+            BucketPrefix: in
+            S3OutputFormatConfig:
+              FileType: PARQUET
+      FlowName: !Sub ${EnvPrefix}-Salesforce-%flowName
+      KMSArn: !Sub '{{resolve:ssm:/kms/arn/${EnvPrefix}-s3}}'
+      SourceFlowConfig:
+        ConnectorProfileName: !Sub '{{resolve:ssm:/${EnvPrefix}/salesforce/connectorName}}'
+        ConnectorType: Salesforce
+        SourceConnectorProperties:
+          Salesforce:
+            EnableDynamicFieldUpdate: true
+            IncludeDeletedRecords: false
+            Object: '%objectName'
+      Tasks:
+      - ConnectorOperator:
+          Salesforce: NO_OP
+        SourceFields: []
+        TaskProperties:
+        - Key: EXCLUDE_SOURCE_FIELDS_LIST
+          Value: '[]'
+        TaskType: Map_all
+      TriggerConfig:
+        TriggerProperties:
+          DataPullMode: Incremental
+          ScheduleExpression: rate(1hours)
+        TriggerType: Scheduled
+  ActivateFlows:
+    Type: AWS::CloudFormation::CustomResource
+    AppFlowMultiply: Account,Order,Product|Product2,User,Opportunity,Order Product|OrderItem,Order Ad Placement|vlocity_cmt__OrderItemAdPlacement__c,Contract,Quote,PriceList|vlocity_cmt__PriceList__c,Ad Space Specification|AdSpaceSpecification,Ad Space Creative Size Type|AdSpaceCreativeSizeType,Ad Creative Size Type|AdCreativeSizeType,Invoice|blng__Invoice__c,InvoiceLine|blng__InvoiceLine__c,Credit Note Allocation|blng__CreditNoteAllocation__c,Contact,Quote Line Item|QuoteLineItem,Activity Code|SWM_Activity_Code__c,Ad Order Item|AdOrderItem,Quote Pricing|vlocity_cmt__QuotePricingAdjustment__c,Quote Discount|vlocity_cmt__QuoteDiscount__c,Quote Discount Pricing|vlocity_cmt__QuoteDiscountPricing__c,Opportunity Product Relationship|vlocity_cmt__OpportunityLineItemRelationship__c,Opportunity Product|OpportunityLineItem,Opportunity Team Member|OpportunityTeamMember,Opportunity Contact Role|OpportunityContactRole,Targeting|Targeting__c,Usage Summary|blng__UsageSummary__c
+    DependsOn: AppFlow%resourceName
+    Properties:
+      ServiceToken: !Sub '{{resolve:ssm:/${AccountPrefix}/cfn-cr-lambda/activateflows}}'
+      FlowName: !Sub ${EnvPrefix}-Salesforce-%flowName

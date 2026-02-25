@@ -1,0 +1,97 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: This stack creates a monthly billing report that is delivered to an S3 bucket in us-east-1
+
+Parameters:
+  # Parameter Store is not cross region, we can't use "AWS::SSM::Parameter::Value<String>" because it does not exist in us-east-1.
+  # We won't update this stack very often. Therefore this param is hardcoded to allow only specific values.
+  # If the situation changes in the future where we have the parameters in us-east-1, this can be changed to use SSM param.
+  AccountPrefix:
+    Description: Account Name as Prefix
+    Type: String
+    Default: dev
+    AllowedValues:
+    - dev
+    - nonprod
+    - prod
+
+Resources:
+  billingS3Bucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      # "swmi = {{resolve:ssm:ProjPrefix}}. This is to avoid name clashing"
+      BucketName: !Sub 'swmi-${AccountPrefix}-billing-reports'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: 'aws:kms'
+            KMSMasterKeyID: !Sub arn:aws:kms:${AWS::Region}:${AWS::AccountId}:${S3KeyAlias}
+          BucketKeyEnabled: true
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: TRUE
+        BlockPublicPolicy: TRUE
+        IgnorePublicAcls: TRUE
+        RestrictPublicBuckets: TRUE
+
+  # https://docs.aws.amazon.com/cur/latest/userguide/cur-s3.html
+  billingBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref billingS3Bucket
+      PolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: billingreports.amazonaws.com
+          Action: [s3:GetBucketAcl, s3:GetBucketPolicy]
+          Resource: !GetAtt billingS3Bucket.Arn
+          Condition:
+            StringEquals:
+              aws:SourceArn: !Sub arn:aws:cur:${AWS::Region}:${AWS::AccountId}:definition/*
+              aws:SourceAccount: !Sub ${AWS::AccountId}
+        - Effect: Allow
+          Principal:
+            Service: billingreports.amazonaws.com
+          Action: [s3:PutObject]
+          Resource: !Sub ${billingS3Bucket.Arn}/*
+          Condition:
+            StringEquals:
+              aws:SourceArn: !Sub arn:aws:cur:${AWS::Region}:${AWS::AccountId}:definition/*
+              aws:SourceAccount: !Sub ${AWS::AccountId}
+
+  # CFN doc is lacking the available options for the properties at the time of making this template. Refer to CLI doc:
+  # https://docs.aws.amazon.com/cli/latest/reference/cur/put-report-definition.html
+  dailyBillingReport:
+    Type: AWS::CUR::ReportDefinition
+    DependsOn: billingBucketPolicy
+    Properties:
+      Compression: GZIP
+      Format: textORcsv
+      RefreshClosedReports: false
+      ReportName: !Sub ${AccountPrefix}-daily-billing-report
+      ReportVersioning: CREATE_NEW_REPORT
+      S3Bucket: !Ref billingS3Bucket
+      S3Prefix: '/'
+      S3Region: !Sub ${AWS::Region}
+      TimeUnit: DAILY
+
+  # For the same reason, create a separate KMS Key for the billing bucket.
+  S3Key:
+    Type: AWS::KMS::Key
+    Properties:
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+          Action: 'kms:*'
+          Resource: '*'
+
+  S3KeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub alias/${AccountPrefix}-billing-bucket-s3-key
+      TargetKeyId: !Ref S3Key

@@ -1,0 +1,957 @@
+openapi: 3.0.1
+info:
+  title: ProposalsLineItem-API
+  description: Full documentation of types at https://developers.google.com/ad-manager/api/reference/v202202/ProposalLineItemService.ProposalLineItem
+  version: 1.0.0
+servers:
+- url: "https://tbd/{basePath}"
+  description: API dev
+  variables:
+    basePath:
+      default: v1
+paths:
+  /gam/proposallineitem:
+    post:
+      tags:
+      - ProposalLineItem API
+      summary: Creates new ProposalLineItem objects
+      description: Creates new ProposalLineItem objects
+      parameters:
+      - name: X-Correlation-Id
+        in: header
+        description: "All responses from the service contain an X-Correlation-Id header\
+          \ containing a unique GUID per request. If the request contains an X-Correlation-Id\
+          \ HTTP Header the service will use this value, otherwise it will generate\
+          \ a new correlation id. The correlation id is a GUID in 8-4-4-12 format."
+        required: false
+        style: simple
+        explode: false
+        schema:
+          type: string
+      - name: X-Application-Label
+        in: header
+        description: Application label to uniquely identify source system
+        required: false
+        style: simple
+        explode: false
+        schema:
+          type: string
+      requestBody:
+        description: create line item request
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProposalLineItemRequest'
+        required: true
+      responses:
+        "200":
+          description: successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateUpdateProposalLineItemResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse400'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+        "404":
+          description: Not Foound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+        "500":
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse500'
+        default:
+          description: any error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseDefault'
+      security:
+      - API-CustomAuthoriser: []
+  /gam/proposallineitem/{id}:
+    put:
+      tags:
+      - ProposalLineItem API
+      summary: Creates new ProposalLineItem objects
+      description: Creates new ProposalLineItem objects
+      parameters:
+      - name: X-Correlation-Id
+        in: header
+        description: "All responses from the service contain an X-Correlation-Id header\
+          \ containing a unique GUID per request. If the request contains an X-Correlation-Id\
+          \ HTTP Header the service will use this value, otherwise it will generate\
+          \ a new correlation id. The correlation id is a GUID in 8-4-4-12 format."
+        required: false
+        style: simple
+        explode: false
+        schema:
+          type: string
+      - name: X-Application-Label
+        in: header
+        description: Application label to uniquely identify source system
+        required: false
+        style: simple
+        explode: false
+        schema:
+          type: string
+      - name: id
+        in: path
+        description: The unique ID of the ProposalLineItem
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: integer
+      requestBody:
+        description: create line item request
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProposalLineItemRequest'
+        required: true
+      responses:
+        "200":
+          description: successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateUpdateProposalLineItemResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse400'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+        "404":
+          description: Not Foound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+        "500":
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse500'
+        default:
+          description: any error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseDefault'
+      security:
+      - API-CustomAuthoriser: []
+components:
+  schemas:
+    CreateProposalLineItemRequest:
+      type: object
+      properties:
+        proposalLineItems:
+          type: array
+          description: "Mandatory, line item to create on an order"
+          items:
+            $ref: '#/components/schemas/ProposalLineItem'
+    UpdateProposalLineItemRequest:
+      type: object
+      properties:
+        proposalLineItems:
+          type: array
+          description: "Mandatory, line item to update on an order"
+          items:
+            $ref: '#/components/schemas/ProposalLineItem'
+    CreateUpdateProposalLineItemResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/CreateUpdateProposalLineItemResponse_data'
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+    ErrorResponse400:
+      type: object
+      properties:
+        code:
+          type: integer
+          description: "Mandatory, http code"
+          example: 400
+        message:
+          type: string
+          description: Optional. failure/exception short message
+          example: Bad Request
+        status:
+          type: string
+          description: Optional. application error code in case of successful response.
+          example: "400301"
+        errors:
+          type: array
+          description: Optional.
+          items:
+            type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+    ServiceResponse:
+      type: object
+      properties:
+        applicationLabel:
+          type: string
+          description: api consumer name mapped from request header parameter
+          example: salesforce
+        time:
+          type: string
+          description: response time sent by api/microservice
+          example: 2021-10-04T10:54:24.792+1000
+        correlationId:
+          type: string
+          description: correlation id sent in request from header
+          example: f8443d84-3cce-4b56-8a8e-328fe77158a7
+    ErrorResponse401:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Unauthorised
+    ErrorResponse403:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Forbidden
+    ErrorResponse404:
+      type: object
+      properties:
+        code:
+          type: integer
+          description: http code
+          example: 404
+        message:
+          type: string
+          description: Optional.
+          example: Not Found
+        status:
+          type: string
+          description: Optional.
+          example: "404000"
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+    ErrorResponse500:
+      type: object
+      properties:
+        code:
+          type: integer
+          description: Mandatory. Http Code
+          format: int32
+          example: 500
+        applicationLabel:
+          type: string
+          description: Mandatory. Application label of consuming application
+          example: salesforce
+        time:
+          type: string
+          description: Mandatory. The date and time when the message was received
+            by recipient.
+          format: date-time
+        correlationId:
+          type: string
+          description: Mandatory. Correlation id of the message received
+          example: f8443d84-3cce-4b56-8a8e-328fe77158a7
+        message:
+          type: string
+          description: Optional. failure/exception short message
+          example: Internal server error
+        status:
+          type: string
+          description: Optional. application error code in case of successful response.
+          example: EC001
+        errors:
+          type: array
+          description: Optional.
+          items:
+            $ref: '#/components/schemas/ErrorsObject'
+    ErrorsObject:
+      type: object
+      properties:
+        code:
+          type: string
+          example: DS501
+        message:
+          type: string
+          example: Downstream not available
+    ErrorResponseDefault:
+      type: object
+      properties:
+        code:
+          type: integer
+          description: Mandatory. Http Code
+          format: int32
+          example: 500
+        message:
+          type: string
+          example: Internal server error
+    ProposalLineItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: The unique ID of the ProposalLineItem. This attribute is read-only.
+        proposalId:
+          type: integer
+          description: "The unique ID of the Proposal, to which the ProposalLineItem\
+            \ belongs. This attribute is required for creation and then is readonly."
+        name:
+          maxLength: 255
+          type: string
+          description: The name of the ProposalLineItem which should be unique under
+            the same Proposal. This attribute has a maximum length of 255 characters.
+            This attribute can be configured as editable after the proposal has been
+            submitted. Please check with your network administrator for editable fields
+            configuration.
+        startDateTime:
+          description: "The date and time at which the line item associated with the\
+            \ ProposalLineItem is enabled to begin serving. This attribute is optional\
+            \ during creation, but required and must be in the future when it turns\
+            \ into a line item. The DateTime.timeZoneID is required if start date\
+            \ time is not null. This attribute becomes readonly once the ProposalLineItem\
+            \ has started delivering."
+          allOf:
+          - $ref: '#/components/schemas/DateTime'
+        endDateTime:
+          description: "The date and time at which the line item associated with the\
+            \ ProposalLineItem stops beening served. This attribute is optional during\
+            \ creation, but required and must be after the startDateTime. The DateTime.timeZoneID\
+            \ is required if end date time is not null."
+          allOf:
+          - $ref: '#/components/schemas/DateTime'
+        timeZoneId:
+          type: string
+          description: "The time zone ID in tz database format (e.g. \"America/Los_Angeles\"\
+            ) for this ProposalLineItem. The number of serving days is calculated\
+            \ in this time zone. So if rateType is RateType.CPD, it will affect the\
+            \ cost calculation. The startDateTime and endDateTime will be returned\
+            \ in this time zone. This attribute is optional and defaults to the network's\
+            \ time zone. This attribute is read-only."
+        internalNotes:
+          maxLength: 65535
+          type: string
+          description: "Provides any additional notes that may annotate the ProposalLineItem.\
+            \ This attribute is optional and has a maximum length of 65,535 characters.\
+            \ This attribute can be configured as editable after the proposal has\
+            \ been submitted. Please check with your network administrator for editable\
+            \ fields configuration."
+        isArchived:
+          type: boolean
+          description: The archival status of the ProposalLineItem. This attribute
+            is read-only.
+        goal:
+          $ref: '#/components/schemas/Goal'
+        contractedUnitsBought:
+          type: integer
+          description: "The contracted number of impressions or clicks. If this is\
+            \ a LineItemType.SPONSORSHIP ProposalLineItem, has RateType.CPD as a rate\
+            \ type, and isProgrammatic is false, then this represents the lifetime\
+            \ minimum impression. If this is a LineItemType.SPONSORSHIP ProposalLineItem,\
+            \ has RateType.CPD as a rate type, and isProgrammatic is true, then this\
+            \ represents the daily minimum impression.\n\nThis attribute is required\
+            \ for percentage-based-goal proposal line items. It does not impact ad-serving\
+            \ and is for reporting purposes only.\n"
+        deliveryRateType:
+          $ref: '#/components/schemas/DeliveryRateType'
+        roadBlockingType:
+          $ref: '#/components/schemas/RoadBlockingType'
+        companionDeliveryOption:
+          $ref: '#/components/schemas/CompanionDeliveryOption'
+        videoMaxDuration:
+          type: integer
+          description: "The max duration of a video creative associated with this\
+            \ ProposalLineItem in milliseconds. This attribute is optional, defaults\
+            \ to the Product.videoMaxDuration on the Product it was created with,\
+            \ and only meaningful if this is a video proposal line item."
+        videoCreativeSkippableAdType:
+          $ref: '#/components/schemas/SkippableAdType'
+        frequencyCaps:
+          type: array
+          description: The set of frequency capping units for this ProposalLineItem.
+            This attribute is optional during creation and defaults to the product's
+            frequency caps if Product.allowFrequencyCapsCustomization is false
+          items:
+            $ref: '#/components/schemas/FrequencyCap'
+        dfpLineItemId:
+          type: integer
+          description: The unique ID of corresponding LineItem. This will be null
+            if the Proposal has not been pushed to Ad Manager. This attribute is read-only.
+        lineItemType:
+          $ref: '#/components/schemas/LineItemType'
+        lineItemPriority:
+          type: integer
+          description: "The priority for the corresponding LineItem of the ProposalLineItem.\
+            \ This attribute is optional during creation and defaults to the product's\
+            \ priority, or a default value assigned by Google. See LineItem.priority\
+            \ for more information."
+        rateType:
+          $ref: '#/components/schemas/RateType'
+        creativePlaceholders:
+          type: array
+          description: Details about the creatives that are expected to serve through
+            the ProposalLineItem. This attribute is optional during creation and defaults
+            to the product's creative placeholders.
+          items:
+            $ref: '#/components/schemas/CreativePlaceholder'
+        targeting:
+          type: object
+          description: Contains the targeting criteria for the ProposalLineItem. This
+            attribute is optional during creation and defaults to the product's targeting.
+        customFieldValues:
+          type: array
+          description: The values of the custom fields associated with the ProposalLineItem.
+            This attribute is optional. This attribute can be configured as editable
+            after the proposal has been submitted. Please check with your network
+            administrator for editable fields configuration.
+          items:
+            type: object
+        appliedLabels:
+          type: array
+          description: The set of labels applied directly to the ProposalLineItem.
+            This attribute is optional.
+          items:
+            $ref: '#/components/schemas/AppliedLabel'
+        effectiveLabels:
+          type: array
+          description: "Contains the set of labels applied directly to the proposal\
+            \ as well as those inherited ones. If a label has been negated, only the\
+            \ negated label is returned. This attribute is read-only."
+          items:
+            $ref: '#/components/schemas/AppliedLabel'
+        disableSameAdvertiserCompetitiveExclusion:
+          type: boolean
+          description: "If a line item has a series of competitive exclusions on it,\
+            \ it could be blocked from serving with line items from the same advertiser.\
+            \ Setting this to true will allow line items from the same advertiser\
+            \ to serve regardless of the other competitive exclusion labels being\
+            \ applied.\n\nThis attribute is optional and defaults to false.\n"
+        isSold:
+          type: boolean
+          description: Indicates whether this ProposalLineItem has been sold. This
+            attribute is read-only.
+        netRate:
+          $ref: '#/components/schemas/Money'
+        netCost:
+          $ref: '#/components/schemas/Money'
+        deliveryIndicator:
+          $ref: '#/components/schemas/DeliveryIndicator'
+        deliveryData:
+          $ref: '#/components/schemas/DeliveryData'
+        computedStatus:
+          $ref: '#/components/schemas/ComputedStatus'
+        lastModifiedDateTime:
+          $ref: '#/components/schemas/DateTime'
+        reservationStatus:
+          $ref: '#/components/schemas/ReservationStatus'
+        lastReservationTime:
+          $ref: '#/components/schemas/DateTime'
+        environmentType:
+          $ref: '#/components/schemas/EnvironmentType'
+        allowedFormats:
+          type: array
+          description: "The set of AllowedFormats that this proposal line item can\
+            \ have. If the set is empty, this proposal line item allows all formats."
+          items:
+            $ref: '#/components/schemas/AllowedFormats'
+        isProgrammatic:
+          type: boolean
+          description: Whether or not the Proposal for this ProposalLineItem is a
+            programmatic deal. This attribute is populated from Proposal.isProgrammatic.
+            This attribute is read-only.
+        marketplaceInfo:
+          type: object
+          description: "The marketplace info if this proposal line item is programmatic,\
+            \ null otherwise."
+        additionalTerms:
+          type: string
+          description: Additional terms shown to the buyer in Marketplace.
+        programmaticCreativeSource:
+          $ref: '#/components/schemas/ProgrammaticCreativeSource'
+        grpSettings:
+          $ref: '#/components/schemas/GrpSettings'
+        estimatedMinimumImpressions:
+          type: integer
+          description: The estimated minimum impressions that should be delivered
+            for a proposal line item.
+        thirdPartyMeasurementSettings:
+          type: object
+          description: Contains third party measurement settings for cross-sell Partners
+        makeGoodInfo:
+          $ref: '#/components/schemas/ProposalLineItemMakegoodInfo'
+        hasMakeGood:
+          type: boolean
+          description: Whether this proposal line item has an associated makegood.
+            This attribute is read-only.
+        canCreateMakeGood:
+          type: boolean
+          description: Whether a new makegood associated with this line item can be
+            created. This attribute is read-only.
+        pauseRole:
+          $ref: '#/components/schemas/NegotiationRole'
+        pauseReason:
+          type: string
+          description: "The reason for pausing the ProposalLineItem, provided by the\
+            \ pauseRole. It is null when the ProposalLineItem is not paused. This\
+            \ attribute is read-only."
+      description: "A ProposalLineItem is added to a programmatic Proposal and is\
+        \ similar to a delivery LineItem. It contains delivery details including information\
+        \ like impression goal or quantity, start and end times, and targeting.\n\n\
+        For full documentation, see https://developers.google.com/ad-manager/api/reference/v202202/ProposalLineItemService.ProposalLineItem\n"
+    DateTime:
+      type: object
+      properties:
+        date:
+          $ref: '#/components/schemas/Date'
+        hour:
+          type: integer
+          example: 0
+        minute:
+          type: integer
+          example: 0
+        second:
+          type: integer
+          example: 0
+        timeZoneId:
+          type: string
+          example: America/Los_Angeles
+      description: Represents a date combined with the time of day.
+    Date:
+      type: object
+      properties:
+        year:
+          type: integer
+          description: "Year (e.g., 2009)"
+          example: 2022
+        month:
+          type: integer
+          description: Month (1..12)
+          example: 2
+        day:
+          type: integer
+          description: Day (1..31)
+          example: 15
+      description: Represents a date.
+    Goal:
+      type: object
+      properties:
+        goalType:
+          description: The type of the goal for the LineItem. It defines the period
+            over which the goal for LineItem should be reached.
+          allOf:
+          - $ref: '#/components/schemas/GoalType'
+        unitType:
+          description: The type of the goal unit for the LineItem.
+          allOf:
+          - $ref: '#/components/schemas/UnitType'
+        units:
+          type: number
+          description: "If this is a primary goal, it represents the number or percentage\
+            \ of impressions or clicks that will be reserved for the LineItem."
+          example: 20
+      description: Defines the criteria a LineItem needs to satisfy to meet its delivery
+        goal.
+    GoalType:
+      type: string
+      example: DAILY
+      enum:
+      - NONE
+      - LIFETIME
+      - DAILY
+      - UNKNOWN
+    UnitType:
+      type: string
+      example: IMPRESSIONS
+      enum:
+      - IMPRESSIONS
+      - CLICKS
+      - CLICK_THROUGH_CPA_CONVERSIONS
+      - VIEW_THROUGH_CPA_CONVERSIONS
+      - TOTAL_CPA_CONVERSIONS
+      - VIEWABLE_IMPRESSIONS
+      - IN_TARGET_IMPRESSIONS
+      - UNKNOWN
+    DeliveryRateType:
+      type: string
+      description: "The strategy for delivering ads over the course of the ProposalLineItem's\
+        \ duration. This attribute is optional and default value is DeliveryRateType.EVENLY.\
+        \ For a Preferred deal ProposalLineItem, the value can only be DeliveryRateType.FRONTLOADED."
+      enum:
+      - EVENLY
+      - FRONTLOADED
+      - AS_FAST_AS_POSSIBLE
+    RoadBlockingType:
+      type: string
+      description: "The strategy for serving roadblocked creatives, i.e. instances\
+        \ where multiple creatives must be served together on a single web page. This\
+        \ attribute is optional during creation and defaults to the product's roadblocking\
+        \ type, or RoadblockingType.ONE_OR_MORE if not specified by the product."
+      enum:
+      - ONLY_ONE
+      - ONE_OR_MORE
+      - AS_MANY_AS_POSSIBLE
+      - ALL_ROADBLOCK
+      - CREATIVE_SET
+    CompanionDeliveryOption:
+      type: string
+      description: The delivery option for companions. This is only valid if the roadblocking
+        type is RoadblockingType.CREATIVE_SET. The default value for roadblocking
+        creatives is CompanionDeliveryOption.OPTIONAL. The default value in other
+        cases is CompanionDeliveryOption.UNKNOWN. Providing something other than CompanionDeliveryOption.UNKNOWN
+        will cause an error.
+      enum:
+      - OPTIONAL
+      - AT_LEAST_ONE
+      - ALL
+      - UNKNOWN
+    SkippableAdType:
+      type: string
+      description: "The proposal line item's creatives' skippability. This attribute\
+        \ is optional, only applicable for video proposal line items, and defaults\
+        \ to SkippableAdType.NOT_SKIPPABLE."
+      enum:
+      - UNKNOWN
+      - DISABLED
+      - ENABLED
+      - INSTREAM_SELECT
+      - ANY
+    FrequencyCap:
+      type: object
+      properties:
+        maxImpressions:
+          type: integer
+          description: The maximum number of impressions than can be served to a user
+            within a specified time period.
+        numTimeUnits:
+          type: integer
+          description: The number of FrequencyCap#timeUnit to represent the total
+            time period.
+        timeUnit:
+          $ref: '#/components/schemas/TimeUnit'
+      description: Represents a limit on the number of times a single viewer can be
+        exposed to the same LineItem in a specified time period.
+    TimeUnit:
+      type: string
+      description: The unit of time for specifying the time period.
+      enum:
+      - MINUTE
+      - HOUR
+      - DAY
+      - WEEK
+      - MONTH
+      - LIFETIME
+      - POD
+      - STREAM
+      - UNKNOWN
+    LineItemType:
+      type: string
+      description: "The corresponding LineItemType of the ProposalLineItem. For a\
+        \ programmatic ProposalLineItem, the value can only be one of:\n\n    LineItemType.SPONSORSHIP\n\
+        \    LineItemType.STANDARD\n    LineItemType.PREFERRED_DEAL\n"
+      enum:
+      - SPONSORSHIP
+      - STANDARD
+      - NETWORK
+      - BULK
+      - PRICE_PRIORITY
+      - HOUSE
+      - LEGACY_DFP
+      - CLICK_TRACKING
+      - ADSENSE
+      - AD_EXCHANGE
+      - BUMPER
+      - ADMOB
+      - PREFERRED_DEAL
+      - UNKNOWN
+    RateType:
+      type: string
+      description: The method used for billing the ProposalLineItem. This attribute
+        is read-only.
+      enum:
+      - CPM
+      - CPC
+      - CPD
+      - CPU
+      - FLAT_FEE
+      - VCPM
+      - CPM_IN_TARGET
+      - UNKNOWN
+    CreativePlaceholder:
+      type: object
+      properties:
+        size:
+          $ref: '#/components/schemas/Size'
+        creativeTemplateId:
+          type: integer
+          description: |
+            The native creative template ID.
+
+            This value is only required if creativeSizeType is CreativeSizeType.NATIVE.
+        expectedCreativeCount:
+          type: integer
+          description: Contains the set of labels applied directly to this creative
+            placeholder as well as those inherited from the creative template from
+            which this creative placeholder was instantiated. This field is readonly
+            and is assigned by Google.
+        creativeSizeType:
+          type: string
+          description: "Describes the types of sizes a creative can be. By default,\
+            \ the creative's size is CreativeSizeType.PIXEL, which is a dimension\
+            \ based size (width-height pair)."
+          enum:
+          - PIXEL
+          - ASPECT_RATIO
+          - INTERSTITIAL
+          - IGNORED
+          - NATIVE
+          - AUDIO
+        targetingName:
+          type: string
+          description: |
+            The name of the CreativeTargeting for creatives this placeholder represents.
+
+            This attribute is optional. Specifying creative targeting here is for forecasting purposes only and has no effect on serving. The same creative targeting should be specified on a LineItemCreativeAssociation when associating a Creative with the LineItem.
+        isAmpOnly:
+          type: boolean
+          description: |
+            Indicate if the expected creative of this placeholder has an AMP only variant.
+
+            This attribute is optional. It is for forecasting purposes only and has no effect on serving.
+    Size:
+      type: object
+      properties:
+        width:
+          type: integer
+        height:
+          type: integer
+        isAspectRation:
+          type: boolean
+          description: Whether this size represents an aspect ratio.
+      description: "Represents the dimensions of an AdUnit, LineItem or Creative.\n\
+        \nFor interstitial size (out-of-page), native, ignored and fluid size, Size\
+        \ must be 1x1.\n"
+    AppliedLabel:
+      type: object
+      properties:
+        labelId:
+          type: integer
+          description: The ID of a created Label.
+        isNegated:
+          type: boolean
+          description: isNegated should be set to true to negate the effects of labelId.
+      description: "Represents a Label that can be applied to an entity. To negate\
+        \ an inherited label, create an AppliedLabel with labelId as the inherited\
+        \ label's ID and isNegated set to true."
+    Money:
+      type: object
+      properties:
+        currencyCode:
+          type: string
+          description: Three letter currency code in string format.
+          example: AUD
+        microAmount:
+          type: integer
+          description: "Money values are always specified in terms of micros which\
+            \ are a millionth of the fundamental currency unit. For US dollars, $1\
+            \ is 1,000,000 micros."
+          example: 1000000
+      description: Total budget for all line items of this Order. This value is present
+        only on response.
+    DeliveryIndicator:
+      type: object
+      properties:
+        expectedDeliveryPercentage:
+          type: number
+          description: How much the LineItem was expected to deliver as a percentage
+            of LineItem.primaryGoal.
+        actualDeliveryPercentage:
+          type: number
+          description: How much the line item actually delivered as a percentage of
+            LineItem.primaryGoal.
+      description: Indicates the delivery performance of the LineItem.
+    DeliveryData:
+      type: integer
+      description: Clicks or impressions delivered for the last 7 days.
+    ComputedStatus:
+      type: string
+      description: Describes the computed LineItem status that is derived from the
+        current state of the line item.
+      enum:
+      - DELIVERY_EXTENDED
+      - DELIVERING
+      - READY
+      - PAUSED
+      - INACTIVE
+      - PAUSED_INVENTORY_RELEASED
+      - PENDING_APPROVAL
+      - COMPLETED
+      - DISAPPROVED
+      - DRAFT
+      - CANCELED
+    ReservationStatus:
+      type: string
+      description: Represents the inventory reservation status for ProposalLineItem
+        objects.
+      enum:
+      - RESERVED
+      - NOT_RESERVED
+      - RELEASE
+      - CHECK_LINE_ITEM_RESERVATION_STATUS
+      - UNKNOWN
+    EnvironmentType:
+      type: string
+      description: Enum for the valid environments in which ads can be shown.
+      enum:
+      - BROWSER
+      - VIDEO_PLAYER
+    AllowedFormats:
+      type: string
+      description: The formats that a publisher allows on their programmatic LineItem
+        or ProposalLineItem.
+      enum:
+      - AUDIO
+      - UNKNOWN
+    ProgrammaticCreativeSource:
+      type: string
+      description: Types of programmatic creative sources.
+      enum:
+      - PUBLISHER
+      - ADVERTISER
+      - UNKNOWN
+    GrpSettings:
+      type: object
+      properties:
+        minTargetAge:
+          type: integer
+          description: Specifies the minimum target age (in years) of the LineItem.
+            This field is only applicable if provider is not null.
+        maxTargetAge:
+          type: integer
+          description: Specifies the maximum target age (in years) of the LineItem.
+            This field is only applicable if provider is not null.
+        targetGender:
+          $ref: '#/components/schemas/GrpTargetGender'
+        provider:
+          $ref: '#/components/schemas/GrpProvider'
+        targetImpressionGoal:
+          type: integer
+          description: "Specifies the impression goal for the given target demographic.\
+            \ This field is only applicable if provider is not null and demographics-based\
+            \ goal is selected by the user. If this field is set, LineItem.primaryGoal\
+            \ will have its Goal.units value set by Google to represent the estimated\
+            \ total quantity."
+        inTargetRatioEstimateMilliPercent:
+          type: integer
+          description: "Estimate for the in-target ratio given the line item's audience\
+            \ targeting. This field is only applicable if provider is Nielsen, LineItem.primaryGoal\
+            \ is in-target impressions, and LineItem.CostType is in-target CPM. This\
+            \ field determines the in-target ratio to use for pacing Nielsen line\
+            \ items before Nielsen reporting data is available. Represented as a milli\
+            \ percent, so 55.7% becomes 55700."
+        nielsenCtvPacingType:
+          $ref: '#/components/schemas/NielsenCtvPacingType'
+        pacingDeviceCategorizationType:
+          $ref: '#/components/schemas/PacingDeviceCategorizationType'
+        applyTrueCoview:
+          type: boolean
+      description: GrpSettings contains information for a line item that will have
+        a target demographic when serving. This information will be used to set up
+        tracking and enable reporting on the demographic information
+    GrpTargetGender:
+      type: string
+      description: Represents the target gender for a GRP demographic targeted line
+        item.
+      enum:
+      - UNKNOWN
+      - MALE
+      - FEMALE
+      - BOTH
+    GrpProvider:
+      type: string
+      description: Represents available GRP providers that a line item will have its
+        target demographic measured by.
+      enum:
+      - UNKNOWN
+      - NIELSEN
+      - GOOGLE
+    NielsenCtvPacingType:
+      type: string
+      description: Represents the pacing computation method for impressions on connected
+        devices for a Nielsen measured line item. This only applies when Nielsen measurement
+        is enabled for connected devices.
+      enum:
+      - UNKNOWN
+      - NONE
+      - COVIEW
+      - STRICT_COVIEW
+    PacingDeviceCategorizationType:
+      type: string
+      description: Represents whose device categorization to use on Nielsen measured
+        line item with auto-pacing enabled.
+      enum:
+      - UNKNOWN
+      - NIELSEN
+      - GOOGLE
+    ProposalLineItemMakegoodInfo:
+      type: object
+      properties:
+        originalProposalLineItemId:
+          type: integer
+          description: The ID of the original proposal line item on which this makegood
+            is based. This attribute is read-only.
+        reason:
+          type: string
+          description: "The publisher-provided reason why this makegood was initiated.\
+            \ This is free form text. The following predefined values can be used\
+            \ to render predefined options in the UI. UNDERDELIVERY: 'Impression underdelivery',\
+            \ SECONDARY_DELIVERY_TERMS: 'Did not meet secondary delivery terms ',\
+            \ PERFORMANCE: 'Performance issues',\n"
+      description: Makegood info for a ProposalLineItemDto.
+    NegotiationRole:
+      type: string
+      description: The role (buyer or seller) that performed an action in the negotiation
+        of a Proposal.
+      enum:
+      - BUYER
+      - SELLER
+      - UNKNOWN
+    CreateUpdateProposalLineItemResponse_data:
+      type: object
+      properties:
+        proposalLineItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProposalLineItem'

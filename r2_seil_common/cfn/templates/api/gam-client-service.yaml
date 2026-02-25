@@ -1,0 +1,84 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+  Stack for the GAM Client Service lambda
+
+Parameters:
+  EnvPrefix:
+    Type: String
+    Description: Environment Name as Prefix
+  LambdaVersion:
+    Type: String
+    Description: Lambda image tag
+
+Resources:
+  Lambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${EnvPrefix}-api-gam-client-service"
+      PackageType: Image
+      MemorySize: 1024
+      Timeout: 30
+      TracingConfig:
+        Mode: Active
+      Code:
+        ImageUri: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${EnvPrefix}-api-gam-client-service:${LambdaVersion}"
+      Environment:
+        Variables:
+          ENVIRONMENT: !Sub "${EnvPrefix}"
+          GAM_APPLICATION_NAME: !Sub "${EnvPrefix}-api-gam-client-service"
+          GAM_ACCOUNT_AWS_SECRET_NAME: !Sub "${EnvPrefix}/gam/service_account_key"
+          GAM_MOCK_AWS_PARAM_NAME: !Sub "/${EnvPrefix}/gam/use-mock-gam-client"
+          SF_ACCOUNT_AWS_SECRET_NAME: !Sub "/${EnvPrefix}/sf/service_account_key"
+      Role: !GetAtt LambdaRole.Arn
+      Tags:
+        - Key: "version"
+          Value: !Ref LambdaVersion
+
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      Policies:
+        - PolicyName: !Sub "${EnvPrefix}GamClientApiFunc"
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Effect: Allow
+                Resource:
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${EnvPrefix}-api-gam-client-service:*"
+              - Action:
+                  - secretsmanager:GetSecretValue
+                Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${EnvPrefix}/gam/*'
+              - Action:
+                  - ssm:GetParameter
+                Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${EnvPrefix}/*'
+              - Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
+                Effect: Allow
+                Resource: '*'
+
+  # Write the Lambda ARN to an SSM parameter, to be used by the API Gateway stack.
+  LambdaArn:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${EnvPrefix}/api/gam-client-service/lambda-arn
+      Type: String
+      Description: The ARN of the GAM client service lambda
+      Value: !GetAtt Lambda.Arn

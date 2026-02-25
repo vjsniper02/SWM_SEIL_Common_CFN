@@ -1,0 +1,10 @@
+{
+    "path": "/path/to/resource",
+    "httpMethod": "POST",
+    "pathParameters": null,
+    "headers": {},
+    "requestContext": {
+      "path": "/prod/path/to/resource",
+      "httpMethod": "POST"
+    }
+  }

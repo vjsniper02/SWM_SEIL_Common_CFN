@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "salesforce-core"
+version = "0.1.0"
+description = ""
+authors = ["Miles Parfitt <miles.parfitt@contino.io>"]
+
+[tool.poetry.dependencies]
+python = "~3.9"
+dependency-injector = "^4.38.0"
+aws-xray-sdk = "^2.9.0"
+salesforce-bulk = "^2.2.0"
+
+[tool.poetry.dev-dependencies]
+pytest = "^7.0.1"
+boto3 = "<1.25.0"
+pytest-cov = "^3.0.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

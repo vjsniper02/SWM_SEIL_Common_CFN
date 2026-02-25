@@ -1,0 +1,292 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: Salesforce to datawarehouse stack for file ingestion
+
+Parameters:
+  EnvPrefix:
+    Type: String
+    Description: Environment Name as Prefix
+
+  AccountPrefix:
+    Description: Account Name as Prefix
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /account/name
+
+  LambdaVersion:
+    Type: String
+
+Resources:
+  # S3 bucket to handle ingestion
+  LandingBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Properties:
+      BucketName: !Sub "{{resolve:ssm:ProjPrefix}}-${EnvPrefix}-sf-to-dw-landing"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: "aws:kms"
+              KMSMasterKeyID: !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${EnvPrefix}-s3"
+            BucketKeyEnabled: true
+      NotificationConfiguration:
+        EventBridgeConfiguration:
+          EventBridgeEnabled: true
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+  LandingBucketBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref LandingBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Sid: DenyPublicListGrant
+          Effect: Deny
+          Principal:
+            AWS: '*'
+          Action: s3:PutBucketAcl
+          Resource:
+          - !GetAtt LandingBucket.Arn
+          Condition:
+            StringLike:
+              s3:x-amz-grant-read:
+              - '*http://acs.amazonaws.com/groups/global/AllUsers*'
+              - '*http://acs.amazonaws.com/groups/global/AuthenticatedUsers*'
+        # Forcing encryption in transit
+        - Sid: SSLAccessOnly
+          Action: s3:*
+          Effect: Deny
+          Resource:
+          - !Sub
+            - '${BucketArn}/*'
+            - BucketArn: !GetAtt LandingBucket.Arn
+          Condition:
+            Bool:
+              aws:SecureTransport: 'false'
+          Principal: "*"
+        - Sid: AllowAppFlowAccess
+          Action:
+          - s3:PutObject
+          - s3:GetBucketAcl
+          - s3:PutObjectAcl
+          - s3:AbortMultipartUpload
+          - s3:ListMultipartUploadParts
+          - s3:ListBucketMultipartUploads
+          Effect: Allow
+          Resource:
+          - !GetAtt LandingBucket.Arn
+          - !Sub
+            - '${BucketArn}/*'
+            - BucketArn: !GetAtt LandingBucket.Arn
+          Principal:
+            Service: appflow.amazonaws.com
+
+  # S3 bucket to handle curated
+  CuratedBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Properties:
+      BucketName: !Sub "{{resolve:ssm:ProjPrefix}}-${EnvPrefix}-sf-to-dw-curated"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: "aws:kms"
+              KMSMasterKeyID: !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${EnvPrefix}-s3"
+            BucketKeyEnabled: true
+      NotificationConfiguration:
+        EventBridgeConfiguration:
+          EventBridgeEnabled: true
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # Creates a bus specific to this integration for traceability
+  EventBus:
+    Type: AWS::Events::EventBus
+    Properties:
+      Name: !Sub "${EnvPrefix}-sf-to-dw"
+
+  # Log group for this bus
+  EventBusLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/events/${EnvPrefix}-sf-to-dw"
+      RetentionInDays: 14
+
+  # Log any events seen on this integration bus to CloudWatch logs
+  EventBusLogging:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub "${EnvPrefix}-sf-to-dw-logging"
+      Description: "Forward all events on sf-to-dw bus to cloud watch logs"
+      EventBusName: !Ref EventBus
+      State: "ENABLED"
+      EventPattern:
+        source:
+          - exists: true
+      Targets:
+        - Arn: !GetAtt EventBusLogGroup.Arn
+          Id: "SfToDwEvents"
+
+  # Forward S3 events to demo bus so that we handle all events in one place
+  EventRuleDefaultToBus:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub "${EnvPrefix}-sf-to-dw-s3-create"
+      Description: "Routes s3 create to sf-to-dw bus"
+      EventBusName: default
+      State: "ENABLED"
+      EventPattern:
+        source:
+          - aws.s3
+        detail:
+          bucket:
+            name:
+              - !Ref LandingBucket
+      Targets:
+        - Arn: !GetAtt EventBus.Arn
+          Id: "DefaultToSfToDwBus"
+          RoleArn: !GetAtt EventBridgeIAMrole.Arn
+
+  # IAM Policy to allow the forwarding of events
+  EventBridgeIAMrole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${EnvPrefix}SfToDwEventForwarding"
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: !Sub "${EnvPrefix}SfToDwEventForwarding"
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - events:PutEvents
+                Resource:
+                  - !GetAtt EventBus.Arn
+
+  # This is the rule that triggers our ingestion lambda
+  IngestRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: s3-create-ingest-lambda
+      Description: Trigger Ingest lambda on s3:create
+      EventBusName: !Ref EventBus
+      EventPattern:
+        source: [ aws.s3 ]
+        detail-type: [ Object Created ]
+        detail:
+          bucket:
+            name: [ !Ref LandingBucket ]
+          object:
+            key:
+              - prefix: "in/"
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt IngestLambda.Arn
+          Id: !Sub "${EnvPrefix}-sw-to-dw-ingest"
+
+  # Permission for EventBridge to invoke ingestion lambda
+  EventBridgeLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt IngestLambda.Arn
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt IngestRule.Arn
+
+  # The lambda itself
+  IngestLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "{{resolve:ssm:ProjPrefix}}-${EnvPrefix}-sf-to-dw-ingest"
+      PackageType: Image
+      Timeout: 30
+      Environment:
+        Variables:
+          EVENT_BUS: !Ref EventBus
+          ENVIRONMENT: !Sub "${EnvPrefix}"
+      TracingConfig:
+        Mode: Active
+      Code:
+        ImageUri: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${EnvPrefix}-sf-to-dw-ingest:${LambdaVersion}"
+      Role: !GetAtt IngestLambdaExecutionRole.Arn
+      Tags:
+        - Key: "version"
+          Value: !Ref LambdaVersion
+        - Key: "env"
+          Value: !Sub ${EnvPrefix}
+
+  # Execution role for lambda
+  IngestLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${EnvPrefix}SfToDwIngest"
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+      Policies:
+        - PolicyName: !Sub "${EnvPrefix}SfToDwIngest"
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Effect: Allow
+                Resource:
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/{{resolve:ssm:ProjPrefix}}-${EnvPrefix}-sf-to-dw-ingest:*"
+              - Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
+                Effect: Allow
+                Resource: "*"
+              - Action:
+                  - s3:GetObject
+                  - s3:GetObjectTagging
+                  - s3:PutObject
+                  - s3:PutObjectTagging
+                  - s3:DeleteObject
+                Effect: Allow
+                Resource:
+                  - !Sub "arn:aws:s3:::${LandingBucket}/*"
+                  - !Sub "arn:aws:s3:::${CuratedBucket}/*"
+              - Action:
+                  - s3:ListBucket
+                Effect: Allow
+                Resource:
+                  - !Sub "arn:aws:s3:::${LandingBucket}"
+                  - !Sub "arn:aws:s3:::${CuratedBucket}"
+              - Action:
+                  - kms:Decrypt
+                  - kms:Encrypt
+                  - kms:GenerateDataKey
+                Effect: Allow
+                Resource: !Sub '{{resolve:ssm:/kms/arn/${EnvPrefix}-s3}}'
+              - Effect: Allow
+                Action:
+                  - events:PutEvents
+                Resource:
+                  - !GetAtt EventBus.Arn
+              - Effect: Allow
+                Action:
+                  - lambda:ListTags
+                Resource:
+                  - !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:*"

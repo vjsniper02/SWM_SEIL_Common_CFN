@@ -1,0 +1,46 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: Salesforce to datawarehouse stack for file ingestion
+
+Parameters:
+  EnvPrefix:
+    Type: String
+    Description: Environment Name as Prefix
+
+  AccountPrefix:
+    Description: Account Name as Prefix
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /account/name
+
+  InstanceClass:
+    Type: String
+    Default: db.t4g.medium
+
+Resources:
+  DbRootPassword:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: !Sub "Root password for ${EnvPrefix} Data Transformation database"
+      Name: !Sub "${EnvPrefix}/rds/dataTransformationPassword"
+      GenerateSecretString:
+        ExcludePunctuation: true
+        SecretStringTemplate: '{"username": "etladmin"}'
+        GenerateStringKey: password
+        PasswordLength: 16
+
+  DataTransformationDatabase:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: !Sub "${EnvPrefix}-data-transformation"
+      DBName: etl
+      DBInstanceClass: !Ref InstanceClass
+      DBSubnetGroupName: dev-restricted-subnetGroup
+      AllocatedStorage: 20
+      Engine: postgres
+      EngineVersion: 13.4
+      MasterUsername:
+        Fn::Sub: "{{resolve:secretsmanager:${DbRootPassword}::username}}"
+      MasterUserPassword:
+        Fn::Sub: "{{resolve:secretsmanager:${DbRootPassword}::password}}"
+      VPCSecurityGroups:
+        - sg-0561d2f7068b767b9

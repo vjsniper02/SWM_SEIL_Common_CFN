@@ -1,0 +1,61 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "AWS Glue Job Demo Hello World"
+
+Parameters:
+  EnvPrefix:
+    Type: String
+    Default: "dev"
+    Description: Project Name as Prefix
+  GlueJobName:
+    Type: String
+    Description: Glue Job Name
+  GlueJobVersion:
+    Type: String
+    Default: "0.0.1"
+    Description: Glue Job tag
+
+Resources:
+  GlueJobRole: # TODO: This role has all accesses. We need to restrict it to minimum accesses in production.
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${EnvPrefix}-glueJobRole"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "glue.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "root"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action: "*"
+                Resource: "*"
+ 
+  HelloJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Command:
+        Name: glueetl
+        ScriptLocation: !Sub 's3://{{resolve:ssm:ProjPrefix}}-${EnvPrefix}-sourcecode/glue/demo/hello.py'
+      DefaultArguments:
+        "--job-bookmark-option": "job-bookmark-enable"
+      ExecutionProperty:
+        MaxConcurrentRuns: 1
+      MaxRetries: 0
+      Name: !Ref GlueJobName
+      Role: !Ref GlueJobRole
+      GlueVersion: "3.0"
+      WorkerType: "Standard"
+      NumberOfWorkers: 2
+      Tags: {"version": !Ref GlueJobVersion}
+

@@ -1,0 +1,729 @@
+openapi: "3.0.1"
+info:
+  title: Orders-API
+  description: >-
+
+    # Introduction
+
+
+    <table><tbody><tr><td class = 'into_api' style='border:none;padding:0 0 0
+    0'><p>The purpose of this API is to process orders</p></td></tr></tbody></table>
+
+
+    # Features
+
+
+    Orders API provides the below features.
+
+    1. Create Orders
+
+    2. Approve Orders
+
+    # Getting Access to the API
+
+    1. Reach out to TBD to get access to this API.
+
+
+    Now head over to **Getting Started** where you can find more details about
+    the API.
+
+
+    # Getting Started
+
+
+    Below are the steps to invoke this API.
+      1. Generate authorizer token.
+      2. Use retreived token within expiry window in header for all call to this API
+
+
+    # Frequently Asked Questions
+
+
+    **Q: How can i get support for this API?**
+
+
+    A. TBD
+  version: 1.0.0
+servers:
+- url: "https://tbd/{basePath}"
+  variables:
+    basePath:
+      default: "v1"
+  description: API dev
+paths:
+  /gam/order:
+    post:
+      tags:
+        - Orders API
+      summary: Create Order
+      description: |
+        create order
+      parameters:
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          description: All responses from the service contain an X-Correlation-Id header containing a unique GUID per request. If the request contains an X-Correlation-Id HTTP Header the service will use this value, otherwise it will generate a new correlation id. The correlation id is a GUID in 8-4-4-12 format.
+          schema:
+            type: string
+        - name: X-Application-Label
+          in: header
+          required: false
+          description: Application label to uniquely identify source system
+          schema:
+            type: string
+      requestBody:
+        description: create order request
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      security:
+      - API-CustomAuthoriser: []
+      responses:
+        '200':
+          description: successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateOrderResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse400'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+        '404':
+          description: Not Foound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+        '500':
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse500'
+        default:
+          description: any error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseDefault'
+  /gam/order/{id}:
+    put:
+      tags:
+        - Orders API
+      summary: Action order
+      description: |
+        perform action on submitted order
+      parameters:
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          description: All responses from the service contain an X-Correlation-Id header containing a unique GUID per request. If the request contains an X-Correlation-Id HTTP Header the service will use this value, otherwise it will generate a new correlation id. The correlation id is a GUID in 8-4-4-12 format.
+          schema:
+            type: string
+        - name: X-Application-Label
+          in: header
+          required: false
+          description: Application label to uniquely identify source system
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: Order Id
+          schema:
+            type: number
+        - name: action
+          in: query
+          required: true
+          description: For now only supported value is "APPROVED"
+          schema:
+            type: string
+            enum:
+            - APPROVED
+            - PENDING_APPROVAL
+            - DRAFT
+            - DISAPPROVED
+            - PAUSED
+            - CANCELED
+            - DELETED
+            - UNKNOWN
+      security:
+      - API-CustomAuthoriser: []
+      responses:
+        '200':
+          description: successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderActionResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+        '404':
+          description: Not Foound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+        '500':
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse500'
+        default:
+          description: any error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseDefault'
+components:
+  securitySchemes:
+    API-CustomAuthoriser:
+      type: "apiKey"
+      name: "Authorization"
+      in: "header"
+      x-amazon-apigateway-authtype: "custom"
+  schemas:
+    CreateOrderRequest:
+      type: object
+      properties:
+        orders:
+          type: array
+          description: Mandatory, the orders to create. only one element expected at this stage
+          items:
+            $ref: '#/components/schemas/OrderRequest'
+    ServiceResponse:
+      type: object
+      properties:
+        # code:
+        #   type: integer
+        #   description: http code
+        #   example: 200
+        applicationLabel:
+          type: string
+          description: api consumer name mapped from request header parameter
+          example: salesforce
+        time:
+          type: string
+          description: response time sent by api/microservice
+          example: 2021-10-04T10:54:24.792+1000
+        correlationId:
+          type: string
+          description: correlation id sent in request from header
+          example: f8443d84-3cce-4b56-8a8e-328fe77158a7
+        # message:
+        #   type: string
+        #   description: Optional.
+        #   example: success
+        # status:
+        #   type: string
+        #   description: Optional.
+        #   example: 200000
+    ErrorResponse500:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+          description: Mandatory. Http Code
+          example: 500
+        applicationLabel:
+          type: string
+          description: Mandatory. Application label of consuming application
+          example: salesforce
+        time:
+          type: string
+          format: date-time
+          description: Mandatory. The date and time when the message was received by recipient.
+          example: '2021-10-04T10:54:24.792+1000'
+        correlationId:
+          type: string
+          description: Mandatory. Correlation id of the message received
+          example: f8443d84-3cce-4b56-8a8e-328fe77158a7
+        message:
+          type: string
+          description: Optional. failure/exception short message
+          example: Internal server error
+        status:
+          type: string
+          description: Optional. application error code in case of successful response.
+          example: EC001
+        errors:
+          type: array
+          description: Optional.
+          items:
+            $ref: '#/components/schemas/ErrorsObject'
+    ErrorsObject:
+      type: object
+      properties:
+        code:
+          type: string
+          example: "DS501"
+        message:
+          type: string
+          example: Downstream not available
+    ErrorResponse404:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: http code
+          example: 404
+        message:
+          type: string
+          description: Optional.
+          example: Not Found
+        status:
+          type: string
+          description: Optional.
+          example: 404000
+    ErrorResponse400:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: Mandatory, http code
+          example: 400
+        message:
+          type: string
+          description: Optional. failure/exception short message
+          example: Bad Request
+        status:
+          type: string
+          description: Optional. application error code in case of successful response.
+          example: 400301
+        errors:
+          type: array
+          description: Optional.
+          items:
+            $ref: '#/components/schemas/ReservationDetailsError'
+    ReservationDetailsError:
+      type: object
+      properties:
+        code:
+          $ref: '#/components/schemas/ReservationDetailsError.Reason'
+        message:
+          type: string
+          example: TBD
+    ErrorResponse401:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Unauthorised
+    ErrorResponse403:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Forbidden
+    ErrorResponseDefault:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+          description: Mandatory. Http Code
+          example: 500
+        message:
+          type: string
+          example: Internal server error
+    CreateOrderResponse:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: http code
+          example: 200
+        message:
+          type: string
+          description: Optional.
+          example: success
+        status:
+          type: string
+          description: Optional.
+          example: 200000
+        data:
+          $ref: '#/components/schemas/OrdersResponse'
+    OrderRequest:
+      type: object
+      description: An Order represents a grouping of individual LineItem objects, each of which fulfill an ad request from a particular advertiser.
+      properties:
+        name:
+          type: string
+          description: Mandatory, The name of the Order. This value is required to create an order.
+          example: TOrder111
+        startDateTime:
+          description: The date and time at which the Order and its associated line items are eligible to begin serving.
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+        status:
+          description: Mandatory, The status of the Order.
+          allOf:
+            - $ref: '#/components/schemas/OrderStatus'
+          example: 'DRAFT'
+        notes:
+          type: string
+          description: Optional, Provides any additional notes that may annotate the Order.
+        externalOrderId:
+          type: integer
+          description: Optional, An arbitrary ID to associate to the Order, which can be used as a key to an external system. This value is optional.
+          example: 1234
+        poNumber:
+          type: string
+          description: Optional, The purchase order number for the Order.
+          example: tbd
+        currencyCode:
+          type: string
+          description: The ISO currency code for the currency used by the Order. This value is read-only and is the network's currency code.
+          example: AUD
+        advertiserId:
+          type: number
+          description: Mandatory, The unique ID of the ADVERTISER, to which this order belongs.
+          example: 4993725282
+        creatorId:
+          type: number
+          description: The unique ID of the User who created the Order on behalf of the advertiser. This value is present only on response.
+          example: 246579220
+        traffickerId:
+          type: number
+          description: Mandatory, The unique ID of the User responsible for trafficking the Order.
+          example: 246560853
+        salespersonId:
+          type: number
+          description: Optional, The unique ID of the User responsible for the sales of the Order.
+          example: tbd
+        totalBudget:
+          $ref: '#/components/schemas/MoneyModel'
+        appliedTeamIds:
+          type: array
+          items:
+            type: number
+          description: The IDs of all teams that this order is on directly.
+          example: [1234, 1234]
+        rules:
+          type: object
+          description: Mandatory, rules to process this transaction
+          allOf:
+          - $ref: '#/components/schemas/Rules'
+    OrdersResponse:
+      type: object
+      properties:
+        orders:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderResponseData'
+          description: list of line items
+    OrderResponseData:
+      type: object
+      properties:
+        id:
+          type: number
+          description: The unique ID of the Order. This value is readonly
+          example: 2827386930
+        name:
+          type: string
+          description: Mandatory, The name of the Order. This value is required to create an order.
+          example: TOrder111
+        status:
+          description: Mandatory, The status of the Order.
+          allOf:
+            - $ref: '#/components/schemas/OrderStatus'
+          example: 'DRAFT'
+    OrderActionResponse:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: http code
+          example: 200
+        message:
+          type: string
+          description: Optional.
+          example: success
+        status:
+          type: string
+          description: Optional.
+          example: 200000
+        data:
+          $ref: '#/components/schemas/OrderResponseData'
+
+    ##Below model is a standard model to be used for future##
+    Order:
+      type: object
+      description: An Order represents a grouping of individual LineItem objects, each of which fulfill an ad request from a particular advertiser.
+      properties:
+        id:
+          type: number
+          description: The unique ID of the Order. This value is readonly
+          example: 2827386930
+        name:
+          type: string
+          description: Mandatory, The name of the Order. This value is required to create an order.
+          example: TOrder111
+        startDateTime:
+          description: The date and time at which the Order and its associated line items are eligible to begin serving.
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+        endDateTime:
+          description: The date and time at which the Order and its associated line items stop being served.
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+        unlimitedEndDateTime:
+          type: boolean
+          description: Specifies whether or not the Order has an unlimited end date. This attribute is readonly and is true if any of the order's line items has LineItem.unlimitedEndDateTime set to true.
+          example: true
+        status:
+          description: Mandatory, The status of the Order.
+          allOf:
+            - $ref: '#/components/schemas/OrderStatus'
+          example: 'DRAFT'
+        isArchived:
+          type: boolean
+          description: The archival status of the Order. This attribute is readonly.
+        notes:
+          type: string
+          description: Optional, Provides any additional notes that may annotate the Order.
+        externalOrderId:
+          type: integer
+          description: Optional, An arbitrary ID to associate to the Order, which can be used as a key to an external system. This value is optional.
+          example: 1234
+        poNumber:
+          type: string
+          description: Optional, The purchase order number for the Order.
+          example: tbd
+        currencyCode:
+          type: string
+          description: The ISO currency code for the currency used by the Order. This value is read-only and is the network's currency code.
+          example: AUD
+        advertiserId:
+          type: number
+          description: Mandatory, The unique ID of the ADVERTISER, to which this order belongs.
+          example: 4993725282
+        advertiserContactIds:
+          type: array
+          items:
+            type: number
+          description: Optional, List of IDs for advertiser contacts of the order.
+          example: [1234, 1234]
+        creatorId:
+          type: number
+          description: The unique ID of the User who created the Order on behalf of the advertiser. This value is present only on response.
+          example: 246579220
+        traffickerId:
+          type: number
+          description: Mandatory, The unique ID of the User responsible for trafficking the Order.
+          example: 246560853
+        secondaryTraffickerIds:
+          type: array
+          items:
+            type: number
+          description: Optional, The IDs of the secondary traffickers associated with the order.
+          example: [1234, 1234]
+        salespersonId:
+          type: number
+          description: Optional, The unique ID of the User responsible for the sales of the Order.
+          example: tbd
+        secondarySalespersonIds:
+          type: array
+          items:
+            type: number
+          description: Optional, The IDs of the secondary salespeople associated with the order.
+          example: [1234, 1234]
+        totalImpressionsDelivered:
+          type: number
+          description: Total impressions delivered for all line items of this Order. This value is present only on response.
+          example: 0
+        totalClicksDelivered:
+          type: number
+          description: Total clicks delivered for all line items of this Order. This value is present only on response.
+          example: 0
+        totalViewableImpressionsDelivered:
+          type: array
+          items:
+            type: number
+          description: Total viewable impressions delivered for all line items of this Order. This value is present only on response.
+          example: 1234
+        totalBudget:
+          $ref: '#/components/schemas/MoneyModel'
+        appliedLabels:
+          type: array
+          items:
+            $ref: '#/components/schemas/AppliedLabelModel'
+          description: The set of labels applied directly to this order.
+        effectiveAppliedLabels:
+          type: array
+          items:
+            $ref: '#/components/schemas/AppliedLabelModel'
+          description: Contains the set of labels applied directly to the order as well as those inherited from the company that owns the order. If a label has been negated, only the negated label is returned. This value is present only on response.
+        lastModifiedByApp:
+          type: string
+          description: The application which modified this order. This value is present only on response. This value is present only on response.
+          example: tbd
+        isProgrammatic:
+          type: boolean
+          description: Specifies whether or not the Order is a programmatic order. This value is optional and defaults to false.
+          example: false
+        appliedTeamIds:
+          type: array
+          items:
+            type: number
+          description: The IDs of all teams that this order is on directly.
+          example: [1234, 1234]
+        lastModifiedDateTime:
+          description: The date and time this order was last modified.
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+        customFieldValues:
+          type: array
+          items:
+            $ref: '#/components/schemas/BaseCustomFieldValueModel'
+          description: The values of the custom fields associated with this order.
+    AppliedLabelModel:
+      type: object
+      description: Represents a Label that can be applied to an entity
+      properties:
+        labelId:
+          type: number
+          description: The ID of a created Label.
+          example: 1234
+        isNegated:
+          type: boolean
+          description: should be set to true to negate the effects of labelId.
+          example: true
+    BaseCustomFieldValueModel:
+      type: object
+      description: The value of a CustomField for a particular entity.
+      properties:
+        customFieldId:
+          type: string
+          description: Mandatory, Id of the CustomField to which this value belongs.
+          example: custom-id
+        value:
+          type: object
+          description: The value for this field, could be string, number or object
+    MoneyModel:
+      type: object
+      description: Total budget for all line items of this Order. This value is present only on response.
+      properties:
+        currencyCode:
+          type: string
+          description: Three letter currency code in string format.
+          example: AUD
+        microAmount:
+          type: number
+          description: Money values are always specified in terms of micros which are a millionth of the fundamental currency unit. For US dollars, $1 is 1,000,000 micros.
+          example: 1000000
+    DateTime:
+      type: object
+      description: Represents a date combined with the time of day.
+      properties:
+        date:
+          $ref: '#/components/schemas/Date'
+        hour:
+          type: integer
+          example: 0
+        minute:
+          type: integer
+          example: 0
+        second:
+          type: integer
+          example: 0
+        timeZoneId:
+          type: string
+          example: America/Los_Angeles
+    Date:
+      type: object
+      description: Represents a date.
+      properties:
+        year:
+          type: integer
+          description: Year (e.g., 2009)
+          example: 2022
+        month:
+          type: integer
+          description: Month (1..12)
+          example: 2
+        day:
+          type: integer
+          description: Day (1..31)
+          example: 15
+    ReservationDetailsError.Reason:
+      type: string
+      description: The reasons for the target error.
+      enum:
+        - UNLIMITED_UNITS_BOUGHT_NOT_ALLOWED
+        - UNLIMITED_END_DATE_TIME_NOT_ALLOWED
+        - PERCENTAGE_UNITS_BOUGHT_TOO_HIGH
+        - DURATION_NOT_ALLOWED
+        - UNIT_TYPE_NOT_ALLOWED
+        - COST_TYPE_NOT_ALLOWED
+        - COST_TYPE_UNIT_TYPE_MISMATCH_NOT_ALLOWED
+        - LINE_ITEM_TYPE_NOT_ALLOWED
+        - NETWORK_REMNANT_ORDER_CANNOT_UPDATE_LINEITEM_TYPE
+        - BACKFILL_WEBPROPERTY_CODE_NOT_ALLOWED
+        - UNKNOWN
+      example: UNLIMITED_UNITS_BOUGHT_NOT_ALLOWED
+    OrderStatus:
+      type: string
+      description: Describes the order statuses.
+      enum:
+        - DRAFT
+        - PENDING_APPROVAL
+        - APPROVED
+        - DISAPPROVED
+        - PAUSED
+        - CANCELED
+        - DELETED
+        - UNKNOWN
+    Rules:
+      type: object
+      description: Rules for processing transaction
+      properties:
+        route:
+          type: object
+          description: route config
+          allOf:
+          - $ref: '#/components/schemas/Route'
+    Route:
+      type: object
+      description: route rules as binary config
+      properties:
+        toGam:
+          type: boolean
+          description: config to check GAM route enabled for this transaction

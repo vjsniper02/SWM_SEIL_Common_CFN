@@ -1,0 +1,22 @@
+.idea/
+.envrc
+.venv
+.DS_Store
+__pycache__/
+.pytest_cache/
+.coverage
+test-reports/
+data/
+dist/
+.tox/
+lambda/venv/
+.vs
+.suo
+code7+-venv/
+.ipynb_checkpoints/
+<<<<<<< HEAD
+.ipynb
+.vscode/
+=======
+.python-version
+>>>>>>> b7c6a1b03bf4159e30743cc7b057d04f67e42414

@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "tech1-ci"
+version = "0.1.0"
+description = "Technology one CI (SOAP) implementation"
+authors = ["Tom Taylor <tom.taylor@contino.io>"]
+
+[tool.poetry.dependencies]
+python = "~3.9"
+suds = "^1.1.2"
+attrs = "^21.4.0"
+dependency-injector = "^4.39.1"
+boto3 = "^1.24.39"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

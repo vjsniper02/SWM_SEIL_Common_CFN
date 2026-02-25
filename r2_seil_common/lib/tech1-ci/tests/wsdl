@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wsdl:definitions xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:tm="http://microsoft.com/wsdl/mime/textMatching/" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/" xmlns:tns="http://TechnologyOneCorp.com/Public/Services" xmlns:s1="WebService" xmlns:s="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/" xmlns:http="http://schemas.xmlsoap.org/wsdl/http/" targetNamespace="http://TechnologyOneCorp.com/Public/Services" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">
+  <wsdl:types>
+    <s:schema elementFormDefault="qualified" targetNamespace="http://TechnologyOneCorp.com/Public/Services">
+      <s:import namespace="WebService" />
+      <s:element name="Warehouse_DoRead">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="request" type="tns:Warehouse_DoRead_Request" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="Warehouse_DoRead_Request">
+        <s:complexContent mixed="false">
+          <s:extension base="tns:RequestBase">
+            <s:sequence>
+              <s:element minOccurs="0" maxOccurs="1" name="Criteria" type="tns:ArrayOfCriterion" />
+            </s:sequence>
+            <s:attribute default="" name="WarehouseName" type="s:string" />
+            <s:attribute default="" name="WarehouseTableName" type="s:string" />
+            <s:attribute name="RetrieveColumns" type="s:boolean" use="required" />
+          </s:extension>
+        </s:complexContent>
+      </s:complexType>
+      <s:complexType name="RequestBase">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="Auth" type="tns:Authentication" />
+          <s:element minOccurs="0" maxOccurs="1" name="Version" type="tns:AppVersion" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="Authentication">
+        <s:attribute name="UserId" type="s:string" />
+        <s:attribute name="Password" type="s:string" />
+        <s:attribute name="Config" type="s:string" />
+        <s:attribute name="FunctionName" type="s:string" />
+      </s:complexType>
+      <s:complexType name="AppVersion">
+        <s:attribute name="Major" type="s:int" use="required" />
+        <s:attribute name="Minor" type="s:int" use="required" />
+        <s:attribute name="Revision" type="s:int" use="required" />
+        <s:attribute name="Patch" type="s:int" use="required" />
+      </s:complexType>
+      <s:complexType name="ArrayOfCriterion">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="Criterion" nillable="true" type="tns:Criterion" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="Criterion">
+        <s:attribute default="" name="PropertyName" type="s:string" />
+        <s:attribute default="" name="OperatorCode" type="s:string" />
+        <s:attribute default="" name="Value" type="s:string" />
+        <s:attribute default="" name="Value2" type="s:string" />
+      </s:complexType>
+      <s:element name="Warehouse_DoReadResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="Warehouse_DoReadResult" type="tns:Warehouse_DoRead_Response" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="Warehouse_DoRead_Response">
+        <s:complexContent mixed="false">
+          <s:extension base="tns:ResponseBase">
+            <s:sequence>
+              <s:element minOccurs="0" maxOccurs="1" name="Columns" type="tns:ArrayOfColumnInfo" />
+              <s:element minOccurs="0" maxOccurs="1" name="Rows" type="tns:ArrayOfString" />
+            </s:sequence>
+          </s:extension>
+        </s:complexContent>
+      </s:complexType>
+      <s:complexType name="ResponseBase">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="Errors" type="s1:WebErrors" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="ArrayOfColumnInfo">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="ColumnInfo" nillable="true" type="tns:ColumnInfo" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="ColumnInfo">
+        <s:attribute name="Index" type="s:int" use="required" />
+        <s:attribute name="Name" type="s:string" />
+        <s:attribute name="Type" type="s:string" />
+        <s:attribute name="MaxLength" type="s:int" use="required" />
+        <s:attribute name="Unique" type="s:boolean" use="required" />
+        <s:attribute name="Nullable" type="s:boolean" use="required" />
+      </s:complexType>
+      <s:complexType name="ArrayOfString">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="Row" nillable="true" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+      <s:element name="Warehouse_DoImport">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="request" type="tns:Warehouse_DoImport_Request" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="Warehouse_DoImport_Request">
+        <s:complexContent mixed="false">
+          <s:extension base="tns:RequestBase">
+            <s:sequence>
+              <s:element minOccurs="0" maxOccurs="1" name="Columns" type="tns:ArrayOfImportColumnInfo" />
+              <s:element minOccurs="0" maxOccurs="1" name="Rows" type="tns:ArrayOfString" />
+            </s:sequence>
+            <s:attribute default="" name="WarehouseName" type="s:string" />
+            <s:attribute default="" name="WarehouseTableName" type="s:string" />
+            <s:attribute default="MixedMode" name="ImportMode" type="tns:ImportModeType" />
+          </s:extension>
+        </s:complexContent>
+      </s:complexType>
+      <s:complexType name="ArrayOfImportColumnInfo">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="ColumnInfo" nillable="true" type="tns:ImportColumnInfo" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="ImportColumnInfo">
+        <s:attribute name="Name" type="s:string" />
+      </s:complexType>
+      <s:simpleType name="ImportModeType">
+        <s:restriction base="s:string">
+          <s:enumeration value="InsertMode" />
+          <s:enumeration value="UpdateMode" />
+          <s:enumeration value="MixedMode" />
+        </s:restriction>
+      </s:simpleType>
+      <s:element name="Warehouse_DoImportResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="Warehouse_DoImportResult" type="tns:Warehouse_DoImport_Response" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="Warehouse_DoImport_Response">
+        <s:complexContent mixed="false">
+          <s:extension base="tns:ResponseBase" />
+        </s:complexContent>
+      </s:complexType>
+      <s:element name="Warehouse_DoDelete">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="request" type="tns:Warehouse_DoDelete_Request" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="Warehouse_DoDelete_Request">
+        <s:complexContent mixed="false">
+          <s:extension base="tns:RequestBase">
+            <s:sequence>
+              <s:element minOccurs="0" maxOccurs="1" name="Criteria" type="tns:ArrayOfCriterion" />
+            </s:sequence>
+            <s:attribute default="" name="WarehouseName" type="s:string" />
+            <s:attribute default="" name="WarehouseTableName" type="s:string" />
+          </s:extension>
+        </s:complexContent>
+      </s:complexType>
+      <s:element name="Warehouse_DoDeleteResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="Warehouse_DoDeleteResult" type="tns:Warehouse_DoDelete_Response" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="Warehouse_DoDelete_Response">
+        <s:complexContent mixed="false">
+          <s:extension base="tns:ResponseBase" />
+        </s:complexContent>
+      </s:complexType>
+    </s:schema>
+    <s:schema elementFormDefault="qualified" targetNamespace="WebService">
+      <s:complexType name="WebErrors">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="Items" type="s1:ArrayOfWebErrorItem" />
+        </s:sequence>
+        <s:attribute name="IsError" type="s:boolean" use="required" />
+        <s:attribute name="IsWarning" type="s:boolean" use="required" />
+      </s:complexType>
+      <s:complexType name="ArrayOfWebErrorItem">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="ErrorItem" nillable="true" type="s1:WebErrorItem" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="WebErrorItem">
+        <s:attribute name="ErrorType" type="s:string" />
+        <s:attribute name="ErrorCode" type="s:string" />
+        <s:attribute name="Description" type="s:string" />
+        <s:attribute name="ShortDescription" type="s:string" />
+      </s:complexType>
+    </s:schema>
+  </wsdl:types>
+  <wsdl:message name="Warehouse_DoReadSoapIn">
+    <wsdl:part name="parameters" element="tns:Warehouse_DoRead" />
+  </wsdl:message>
+  <wsdl:message name="Warehouse_DoReadSoapOut">
+    <wsdl:part name="parameters" element="tns:Warehouse_DoReadResponse" />
+  </wsdl:message>
+  <wsdl:message name="Warehouse_DoImportSoapIn">
+    <wsdl:part name="parameters" element="tns:Warehouse_DoImport" />
+  </wsdl:message>
+  <wsdl:message name="Warehouse_DoImportSoapOut">
+    <wsdl:part name="parameters" element="tns:Warehouse_DoImportResponse" />
+  </wsdl:message>
+  <wsdl:message name="Warehouse_DoDeleteSoapIn">
+    <wsdl:part name="parameters" element="tns:Warehouse_DoDelete" />
+  </wsdl:message>
+  <wsdl:message name="Warehouse_DoDeleteSoapOut">
+    <wsdl:part name="parameters" element="tns:Warehouse_DoDeleteResponse" />
+  </wsdl:message>
+  <wsdl:portType name="E1WAR_ServicesSoap">
+    <wsdl:operation name="Warehouse_DoRead">
+      <wsdl:documentation xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">Reads data from a data warehouse table.</wsdl:documentation>
+      <wsdl:input message="tns:Warehouse_DoReadSoapIn" />
+      <wsdl:output message="tns:Warehouse_DoReadSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="Warehouse_DoImport">
+      <wsdl:documentation xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">Inserts/Updates data in a data warehouse table.</wsdl:documentation>
+      <wsdl:input message="tns:Warehouse_DoImportSoapIn" />
+      <wsdl:output message="tns:Warehouse_DoImportSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="Warehouse_DoDelete">
+      <wsdl:documentation xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">Deletes data in a data warehouse table.</wsdl:documentation>
+      <wsdl:input message="tns:Warehouse_DoDeleteSoapIn" />
+      <wsdl:output message="tns:Warehouse_DoDeleteSoapOut" />
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:binding name="E1WAR_ServicesSoap" type="tns:E1WAR_ServicesSoap">
+    <soap:binding transport="http://schemas.xmlsoap.org/soap/http" />
+    <wsdl:operation name="Warehouse_DoRead">
+      <soap:operation soapAction="http://TechnologyOneCorp.com/Public/Services/Warehouse_DoRead" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="Warehouse_DoImport">
+      <soap:operation soapAction="http://TechnologyOneCorp.com/Public/Services/Warehouse_DoImport" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="Warehouse_DoDelete">
+      <soap:operation soapAction="http://TechnologyOneCorp.com/Public/Services/Warehouse_DoDelete" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:binding name="E1WAR_ServicesSoap12" type="tns:E1WAR_ServicesSoap">
+    <soap12:binding transport="http://schemas.xmlsoap.org/soap/http" />
+    <wsdl:operation name="Warehouse_DoRead">
+      <soap12:operation soapAction="http://TechnologyOneCorp.com/Public/Services/Warehouse_DoRead" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="Warehouse_DoImport">
+      <soap12:operation soapAction="http://TechnologyOneCorp.com/Public/Services/Warehouse_DoImport" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="Warehouse_DoDelete">
+      <soap12:operation soapAction="http://TechnologyOneCorp.com/Public/Services/Warehouse_DoDelete" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:service name="E1WAR_Services">
+    <wsdl:port name="E1WAR_ServicesSoap" binding="tns:E1WAR_ServicesSoap">
+      <soap:address location="https://seven-test.t1cloud.com/T1CESDefault/App/E1WAR_Services.asmx" />
+    </wsdl:port>
+    <wsdl:port name="E1WAR_ServicesSoap12" binding="tns:E1WAR_ServicesSoap12">
+      <soap12:address location="https://seven-test.t1cloud.com/T1CESDefault/App/E1WAR_Services.asmx" />
+    </wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>

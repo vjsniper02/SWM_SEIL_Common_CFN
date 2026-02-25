@@ -1,0 +1,180 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+  This stack contains all of the ECRs that are needed per environment.
+  The idea is that repo names match the lamba name i.e. <env>-<some-parent-name>-<name>
+
+Parameters:
+  EnvPrefix:
+    Type: String
+    Description: Environment Name as Prefix
+
+Resources:
+  EcrTechOneClientService:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Join [ "-", [ !Ref EnvPrefix, "api-tech1-client-service" ] ]
+      EncryptionConfiguration:
+        EncryptionType: KMS
+        KmsKey: !Sub alias/${EnvPrefix}-ecr
+      RepositoryPolicyText: 
+        Version: "2012-10-17"
+        Statement: 
+          - Sid: AllowLambdaAccess
+            Effect: Allow
+            Principal: 
+              Service: lambda.amazonaws.com
+            Action: 
+              - "ecr:BatchGetImage"
+              - "ecr:DeleteRepositoryPolicy"
+              - "ecr:GetDownloadUrlForLayer"
+              - "ecr:GetRepositoryPolicy"
+              - "ecr:SetRepositoryPolicy"
+            Condition:
+              StringLike:
+                aws:sourceArn: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:*"
+
+  EcrTechOneRouterService:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Join [ "-", [ !Ref EnvPrefix, "api-tech1-router-service" ] ]
+      EncryptionConfiguration:
+        EncryptionType: KMS
+        KmsKey: !Sub alias/${EnvPrefix}-ecr
+      RepositoryPolicyText: 
+        Version: "2012-10-17"
+        Statement: 
+          - Sid: AllowLambdaAccess
+            Effect: Allow
+            Principal: 
+              Service: lambda.amazonaws.com
+            Action: 
+              - "ecr:BatchGetImage"
+              - "ecr:DeleteRepositoryPolicy"
+              - "ecr:GetDownloadUrlForLayer"
+              - "ecr:GetRepositoryPolicy"
+              - "ecr:SetRepositoryPolicy"
+            Condition:
+              StringLike:
+                aws:sourceArn: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:*"
+
+  EcrGamClientService:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Join [ "-", [ !Ref EnvPrefix, "api-gam-client-service" ] ]
+      EncryptionConfiguration:
+        EncryptionType: KMS
+        KmsKey: !Sub alias/${EnvPrefix}-ecr
+      RepositoryPolicyText: 
+        Version: "2012-10-17"
+        Statement: 
+          - Sid: AllowLambdaAccess
+            Effect: Allow
+            Principal: 
+              Service: lambda.amazonaws.com
+            Action: 
+              - "ecr:BatchGetImage"
+              - "ecr:DeleteRepositoryPolicy"
+              - "ecr:GetDownloadUrlForLayer"
+              - "ecr:GetRepositoryPolicy"
+              - "ecr:SetRepositoryPolicy"
+            Condition:
+              StringLike:
+                aws:sourceArn: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:*"
+
+  EcrGamRouterService:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Join [ "-", [ !Ref EnvPrefix, "api-gam-router-service" ] ]
+      EncryptionConfiguration:
+        EncryptionType: KMS
+        KmsKey: !Sub alias/${EnvPrefix}-ecr
+      RepositoryPolicyText: 
+        Version: "2012-10-17"
+        Statement: 
+          - Sid: AllowLambdaAccess
+            Effect: Allow
+            Principal: 
+              Service: lambda.amazonaws.com
+            Action: 
+              - "ecr:BatchGetImage"
+              - "ecr:DeleteRepositoryPolicy"
+              - "ecr:GetDownloadUrlForLayer"
+              - "ecr:GetRepositoryPolicy"
+              - "ecr:SetRepositoryPolicy"
+            Condition:
+              StringLike:
+                aws:sourceArn: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:*"
+
+  EcrGamSfSyncService:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Join [ "-", [ !Ref EnvPrefix, "gam-to-sf-delivery-reporting" ] ]
+      EncryptionConfiguration:
+        EncryptionType: KMS
+        KmsKey: !Sub alias/${EnvPrefix}-ecr
+      RepositoryPolicyText: 
+        Version: "2012-10-17"
+        Statement: 
+          - Sid: AllowLambdaAccess
+            Effect: Allow
+            Principal: 
+              Service: lambda.amazonaws.com
+            Action: 
+              - "ecr:BatchGetImage"
+              - "ecr:DeleteRepositoryPolicy"
+              - "ecr:GetDownloadUrlForLayer"
+              - "ecr:GetRepositoryPolicy"
+              - "ecr:SetRepositoryPolicy"
+            Condition:
+              StringLike:
+                aws:sourceArn: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:*"
+
+  # SF to DW
+  SfToDwIngest:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub "${EnvPrefix}-sf-to-dw-ingest"
+      EncryptionConfiguration:
+        EncryptionType: KMS
+        KmsKey: !Sub alias/${EnvPrefix}-ecr
+      RepositoryPolicyText: 
+        Version: "2012-10-17"
+        Statement: 
+          - Sid: AllowLambdaAccess
+            Effect: Allow
+            Principal: 
+              Service: lambda.amazonaws.com
+            Action: 
+              - "ecr:BatchGetImage"
+              - "ecr:DeleteRepositoryPolicy"
+              - "ecr:GetDownloadUrlForLayer"
+              - "ecr:GetRepositoryPolicy"
+              - "ecr:SetRepositoryPolicy"
+            Condition:
+              StringLike:
+                aws:sourceArn: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:*"
+
+  # SF to DW
+  SfToT1Billing:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub "${EnvPrefix}-sf-to-t1-billing"
+      EncryptionConfiguration:
+        EncryptionType: KMS
+        KmsKey: !Sub alias/${EnvPrefix}-ecr
+      RepositoryPolicyText:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowLambdaAccess
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action:
+              - "ecr:BatchGetImage"
+              - "ecr:DeleteRepositoryPolicy"
+              - "ecr:GetDownloadUrlForLayer"
+              - "ecr:GetRepositoryPolicy"
+              - "ecr:SetRepositoryPolicy"
+            Condition:
+              StringLike:
+                aws:sourceArn: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:*"

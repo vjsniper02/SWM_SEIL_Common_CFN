@@ -1,0 +1,971 @@
+openapi: "3.0.1"
+info:
+  title: LineItem-API
+  description: >-
+
+    # Introduction
+
+
+    <table><tbody><tr><td class = 'into_api' style='border:none;padding:0 0 0
+    0'><p>The purpose of this API is to deal with line items on an order</p></td></tr></tbody></table>
+
+
+    # Features
+
+
+    LineItem API provides the below features.
+
+    1. Create LineItem on an order
+
+    # Getting Access to the API
+
+    1. Reach out to TBD to get access to this API.
+
+
+    Now head over to **Getting Started** where you can find more details about
+    the API.
+
+
+    # Getting Started
+
+
+    Below are the steps to invoke this API.
+      1. Generate authorizer token.
+      2. Use retreived token within expiry window in header for all call to this API
+
+
+    # Frequently Asked Questions
+
+
+    **Q: How can i get support for this API?**
+
+
+    A. TBD
+  version: 1.0.0
+servers:
+- url: "https://tbd/{basePath}"
+  variables:
+    basePath:
+      default: "v1"
+  description: API dev
+paths:
+  /gam/lineitem:
+    post:
+      tags:
+        - LineItem API
+      summary: Create Line Item
+      description: |
+        create line item on an order
+      parameters:
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          description: All responses from the service contain an X-Correlation-Id header containing a unique GUID per request. If the request contains an X-Correlation-Id HTTP Header the service will use this value, otherwise it will generate a new correlation id. The correlation id is a GUID in 8-4-4-12 format.
+          schema:
+            type: string
+        - name: X-Application-Label
+          in: header
+          required: false
+          description: Application label to uniquely identify source system
+          schema:
+            type: string
+      requestBody:
+        description: create line item request
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLineItemRequest'
+      security:
+      - API-CustomAuthoriser: []
+      responses:
+        '200':
+          description: successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateLineItemResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse400'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+        '404':
+          description: Not Foound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+        '500':
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse500'
+        default:
+          description: any error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseDefault'
+    put:
+      tags:
+        - LineItem API
+      summary: update an existing line item
+      description: |
+        Update an existing line item
+      parameters:
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          description: All responses from the service contain an X-Correlation-Id header containing a unique GUID per request. If the request contains an X-Correlation-Id HTTP Header the service will use this value, otherwise it will generate a new correlation id. The correlation id is a GUID in 8-4-4-12 format.
+          schema:
+            type: string
+        - name: X-Application-Label
+          in: header
+          required: false
+          description: Application label to uniquely identify source system
+          schema:
+            type: string
+        - name: toGam
+          in: query
+          required: true
+          description: For now default route to GAM only
+          example: true
+          schema:
+            type: boolean
+      requestBody:
+        description: line item to be updated
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LineItemRequest'
+      security:
+      - API-CustomAuthoriser: []
+      responses:
+        '200':
+          description: successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateLineItemResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse400'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+        '404':
+          description: Not Foound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+        '500':
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse500'
+        default:
+          description: any error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseDefault'
+    get:
+        tags:
+          - LineItem API
+        summary: get line items
+        description: |
+          Get line items by statement
+        parameters:
+          - name: X-Correlation-Id
+            in: header
+            required: false
+            description: All responses from the service contain an X-Correlation-Id header containing a unique GUID per request. If the request contains an X-Correlation-Id HTTP Header the service will use this value, otherwise it will generate a new correlation id. The correlation id is a GUID in 8-4-4-12 format.
+            schema:
+              type: string
+          - name: X-Application-Label
+            in: header
+            required: false
+            description: Application label to uniquely identify source system
+            schema:
+              type: string
+          - name: lineitemid
+            in: query
+            required: false
+            description: Line Item Id. Either a line item ID or an order ID must be provided
+            schema:
+              type: number
+          - name: orderid
+            in: query
+            required: false
+            description: Order Id. Either a line item ID or an order ID must be provided
+            schema:
+              type: number
+          - name: toGam
+            in: query
+            required: true
+            description: For now default route to GAM only
+            example: true
+            schema:
+              type: boolean
+        security:
+        - API-CustomAuthoriser: []
+        responses:
+          '200':
+            description: successful response
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/GetLineItemResponse'
+          '400':
+            description: Bad Request
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ErrorResponse400'
+          '401':
+            description: Unauthorized
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ErrorResponse401'
+          '403':
+            description: Forbidden
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ErrorResponse403'
+          '404':
+            description: Not Foound
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ErrorResponse404'
+          '500':
+            description: Error response
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ErrorResponse500'
+          default:
+            description: any error
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ErrorResponseDefault'
+  /gam/lineitem/action:
+    put:
+      tags:
+        - LineItem API
+      summary: perform action on a line item
+      description: |
+        Perform action on a line item
+      parameters:
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          description: All responses from the service contain an X-Correlation-Id header containing a unique GUID per request. If the request contains an X-Correlation-Id HTTP Header the service will use this value, otherwise it will generate a new correlation id. The correlation id is a GUID in 8-4-4-12 format.
+          schema:
+            type: string
+        - name: X-Application-Label
+          in: header
+          required: false
+          description: Application label to uniquely identify source system
+          schema:
+            type: string
+        - name: toGam
+          in: query
+          required: true
+          description: For now default route to GAM only
+          example: true
+          schema:
+            type: boolean
+      requestBody:
+        description: perform lineitem action request
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LineItemActionRequest'
+      security:
+      - API-CustomAuthoriser: []
+      responses:
+        '200':
+          description: successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LineItemActionResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse400'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+        '404':
+          description: Not Foound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+        '500':
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse500'
+        default:
+          description: any error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseDefault'
+components:
+  securitySchemes:
+    API-CustomAuthoriser:
+      type: "apiKey"
+      name: "Authorization"
+      in: "header"
+      x-amazon-apigateway-authtype: "custom"
+  schemas:
+    ServiceResponse:
+      type: object
+      properties:
+        applicationLabel:
+          type: string
+          description: api consumer name mapped from request header parameter
+          example: salesforce
+        time:
+          type: string
+          description: response time sent by api/microservice
+          example: 2021-10-04T10:54:24.792+1000
+        correlationId:
+          type: string
+          description: correlation id sent in request from header
+          example: f8443d84-3cce-4b56-8a8e-328fe77158a7
+    CreateLineItemRequest:
+      type: object
+      properties:
+        lineItems:
+          type: array
+          description: Mandatory, line items to create on an order
+          items:
+            $ref: '#/components/schemas/LineItemRequest'
+    UpdateLineItemRequest:
+      type: object
+      properties:
+        lineItems:
+          type: array
+          description: Mandatory, line items to create on an order
+          items:
+            $ref: '#/components/schemas/LineItemUpdateRequest'
+    CreateLineItemResponse:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: http code
+          example: 200
+        message:
+          type: string
+          description: Optional.
+          example: success
+        status:
+          type: string
+          description: Optional.
+          example: 200000
+        data:
+          $ref: '#/components/schemas/LineItemResponses'
+    GetLineItemResponse:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: http code
+          example: 200
+        message:
+          type: string
+          description: Optional.
+          example: success
+        status:
+          type: string
+          description: Optional.
+          example: 200000
+        data:
+          $ref: '#/components/schemas/LineItemResponses'
+    LineItemActionRequest:
+      type: object
+      properties:
+        ids:
+          type: array
+          description: Line item IDs
+          example: [1234, 2345]
+          items:
+            type: number
+        action:
+          type: string
+          description: The action to perform on all line items
+          enum:
+            - activate
+            - archive
+            - delete
+            - pause
+            - release
+            - reserve
+            - resume
+    LineItemActionResponse:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: http code
+          example: 200
+        message:
+          type: string
+          description: Optional.
+          example: success
+        status:
+          type: string
+          description: Optional.
+          example: 200000
+        data:
+          $ref: '#/components/schemas/LineItemActionResponseData'
+    LineItemActionResponseData:
+      type: object
+      properties:
+        numChanges:
+          type: integer
+          description: The number of objects that were changed as a result of performing the action.
+          example: 1
+    ErrorResponse500:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+          description: Mandatory. Http Code
+          example: 500
+        applicationLabel:
+          type: string
+          description: Mandatory. Application label of consuming application
+          example: salesforce
+        time:
+          type: string
+          format: date-time
+          description: Mandatory. The date and time when the message was received by recipient.
+          example: '2021-10-04T10:54:24.792+1000'
+        correlationId:
+          type: string
+          description: Mandatory. Correlation id of the message received
+          example: f8443d84-3cce-4b56-8a8e-328fe77158a7
+        message:
+          type: string
+          description: Optional. failure/exception short message
+          example: Internal server error
+        status:
+          type: string
+          description: Optional. application error code in case of successful response.
+          example: EC001
+        errors:
+          type: array
+          description: Optional.
+          items:
+            $ref: '#/components/schemas/ErrorsObject'
+    ErrorsObject:
+      type: object
+      properties:
+        code:
+          type: string
+          example: "DS501"
+        message:
+          type: string
+          example: Downstream not available
+    ErrorResponse404:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: http code
+          example: 404
+        message:
+          type: string
+          description: Optional.
+          example: Not Found
+        status:
+          type: string
+          description: Optional.
+          example: 404000
+    ErrorResponse400:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: Mandatory, http code
+          example: 400
+        message:
+          type: string
+          description: Optional. failure/exception short message
+          example: Bad Request
+        status:
+          type: string
+          description: Optional. application error code in case of successful response.
+          example: 400301
+        errors:
+          type: array
+          description: Optional.
+          items:
+            $ref: '#/components/schemas/ReservationDetailsError'
+    ReservationDetailsError:
+      type: object
+      properties:
+        code:
+          $ref: '#/components/schemas/ReservationDetailsError.Reason'
+        message:
+          type: string
+          example: TBD
+    ErrorResponse401:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Unauthorised
+    ErrorResponse403:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Forbidden
+    ErrorResponseDefault:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+          description: Mandatory. Http Code
+          example: 500
+        message:
+          type: string
+          example: Internal server error
+    LineItemRequest:
+      description: LineItem is an advertiser's commitment to purchase a specific number of ad impressions, clicks, or time.
+      allOf:
+        - $ref: '#/components/schemas/LineItemSummaryRequest'
+      type: object
+      properties:
+        targeting:
+          $ref: '#/components/schemas/TargetingRequest'
+        rules:
+          type: object
+          description: Mandatory, rules to process this transaction
+          allOf:
+          - $ref: '#/components/schemas/Rules'
+    LineItemUpdateRequest:
+      description: update an existing line item
+      type: object
+      properties:
+        id:
+          type: number
+          description: Mandatory, Line Item Id.
+          example: 1234
+        action:
+          description: Mandatory, The status of the LineItem to be updated.
+          enum:
+            - ACTIVATE
+            - ARCHIVE
+            - DELETE
+            - PAUSE
+            - RELEASE
+            - RESERVE
+            - RESUME
+            - UNARCHIVE
+          example: 'ACTIVATE'
+    LineItemResponses:
+      type: object
+      properties:
+        lineItems:
+          type: array
+          description: list of line items responses
+          items:
+            $ref: '#/components/schemas/LineItemResponseData'
+    LineItemResponseData:
+      type: object
+      properties:
+        id:
+          type: number
+          description: The unique ID of the Order. This value is readonly
+          example: 2827386930
+        name:
+          type: string
+          description: Mandatory, The name of the Order. This value is required to create an order.
+          example: TOrder111
+        status:
+          description: Mandatory, The status of the Order.
+          allOf:
+            - $ref: '#/components/schemas/ComputedStatus'
+          example: 'DRAFT'
+    LineItemSummaryRequest:
+      type: object
+      description: LineItem is an advertiser's commitment to purchase a specific number of ad impressions, clicks, or time.
+      properties:
+        orderId:
+          type: number
+          description: Mandatory, TThe ID of the Order to which the LineItem belongs.
+          example: 2827917054
+        name:
+          type: string
+          description: Mandatory, The name of the line item.
+          example: tbd
+        startDateTime:
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+          description: Mandatory, The date and time on which the LineItem is enabled to begin serving. This attribute is required and must be in the future.
+        unlimitedEndDateTime:
+          type: boolean
+          description: Specifies whether or not the LineItem has an end time. This attribute is optional and defaults to false.
+          example: true
+        lineItemType:
+          description: Mandatory, Indicates the line item type of a LineItem. This attribute is required. The line item type determines the default priority of the line item.
+          allOf:
+            - $ref: '#/components/schemas/LineItemType'
+          example: 'STANDARD'
+        costPerUnit:
+          description: The amount of money to spend per impression or click. This attribute is required for creating a LineItem.
+          allOf:
+          - $ref: '#/components/schemas/Money'
+        creativePlaceholders:
+          type: array
+          description: Mandatory, Details about the creatives that are expected to serve through this LineItem. This attribute is required and replaces the creativeSizes attribute.
+          items:
+            $ref: '#/components/schemas/CreativePlaceholderRequest'
+        primaryGoal:
+          description: The primary goal that this LineItem is associated with, which is used in its pacing and budgeting.
+          allOf:
+            - $ref: '#/components/schemas/Goal'
+    CreativePlaceholderRequest:
+      type: object
+      description: A CreativePlaceholder describes a slot that a creative is expected to fill. This is used primarily to help in forecasting, and also to validate that the correct creatives are associated with the line item. A CreativePlaceholder must contain a size, and it can optionally contain companions. Companions are only valid if the line item's environment type is EnvironmentType.VIDEO_PLAYER.
+      properties:
+        size:
+          $ref: '#/components/schemas/Size'
+        isAmpOnly:
+          type: boolean
+          description: Optional, Indicate if the expected creative of this placeholder has an AMP only variant. This attribute is optional. It is for forecasting purposes only and has no effect on serving.
+          example: false
+    TargetingRequest:
+      type: object
+      description: Contains targeting criteria for LineItem objects.
+      properties:
+        geoTargeting:
+          description: Optional, Specifies what geographical locations are targeted by the LineItem. This attribute is optional.
+          allOf:
+            - $ref: '#/components/schemas/GeoTargetingRequest'
+        inventoryTargeting:
+          description: Mandatory, Specifies what inventory is targeted by the LineItem. This attribute is required. The line item must target at least one ad unit or placement.
+          allOf:
+            - $ref: '#/components/schemas/InventoryTargetingRequest'
+    GeoTargetingRequest:
+      type: object
+      description: Provides line items the ability to target geographical locations.
+      properties:
+        targetedLocations:
+          description: The geographical locations being targeted by the LineItem.
+          type: array
+          items:
+            $ref: '#/components/schemas/LocationRequest'
+    LocationRequest:
+      type: object
+      description: A Location represents a geographical entity that can be targeted.
+      properties:
+        id:
+          description: Uniquely identifies each Location.
+          type: number
+          example: 1234
+        type:
+          description: The location type for this geographical entity
+          type: string
+          example: COUNTRY
+        displayName:
+          description: The localized name of the geographical entity.
+          type: string
+          example: AUSTRALIA
+    InventoryTargetingRequest:
+      type: object
+      description: A collection of targeted and excluded ad units and placements.
+      properties:
+        targetedAdUnits:
+          description: A list of targeted AdUnitTargeting.
+          type: array
+          items:
+            $ref: '#/components/schemas/AdUnitTargeting'
+    Money:
+      type: object
+      description: Total budget for all line items of this Order. This value is present only on response.
+      properties:
+        currencyCode:
+          type: string
+          description: Three letter currency code in string format.
+          example: AUD
+        microAmount:
+          type: number
+          description: Money values are always specified in terms of micros which are a millionth of the fundamental currency unit. For US dollars, $1 is 1,000,000 micros.
+          example: 1000000
+    CreativePlaceholder:
+      type: object
+      description: A CreativePlaceholder describes a slot that a creative is expected to fill. This is used primarily to help in forecasting, and also to validate that the correct creatives are associated with the line item. A CreativePlaceholder must contain a size, and it can optionally contain companions. Companions are only valid if the line item's environment type is EnvironmentType.VIDEO_PLAYER.
+      properties:
+        size:
+          $ref: '#/components/schemas/Size'
+        creativeTemplateId:
+          type: number
+          description: The native creative template ID. This value is only required if creativeSizeType is CreativeSizeType.NATIVE.
+        companions:
+          $ref: '#/components/schemas/CreativePlaceholder'
+        appliedLabels:
+          $ref: '#/components/schemas/AppliedLabel'
+        effectiveAppliedLabels:
+          $ref: '#/components/schemas/AppliedLabel'
+        expectedCreativeCount:
+          type: integer
+          description: Expected number of creatives that will be uploaded corresponding to this creative placeholder. This estimate is used to improve the accuracy of forecasting; for example, if label frequency capping limits the number of times a creative may be served.
+          example: 5
+        creativeSizeType:
+          type: string
+          description: Describes the types of sizes a creative can be. By default, the creative's size is CreativeSizeType.PIXEL, which is a dimension based size (width-height pair).
+          enum: ['PIXEL', 'ASPECT_RATIO', 'INTERSTITIAL', 'IGNORED', 'NATIVE', 'AUDIO']
+          example: PIXEL
+        targetingName:
+          type: string
+          description: Optional, Specifying creative targeting here is for forecasting purposes only and has no  effect on serving.
+        isAmpOnly:
+          type: boolean
+          description: Optional, Indicate if the expected creative of this placeholder has an AMP only variant. This attribute is optional. It is for forecasting purposes only and has no effect on serving.
+    Size:
+      type: object
+      description: Represents the dimensions of an AdUnit, LineItem or Creative.
+      properties:
+        width:
+          type: integer
+          description: The width of the LineItem
+          example: 10
+        height:
+          type: integer
+          description: The height of the LineItem
+          example: 10
+        isAspectRatio:
+          type: boolean
+          description: Whether this size represents an aspect ratio.
+          example: true
+    AppliedLabel:
+      type: object
+      description: Represents a Label that can be applied to an entity.
+      properties:
+        labelId:
+          type: number
+          description: The ID of a created Label.
+          example: 10
+        isNegated:
+          type: boolean
+          description: isNegated should be set to true to negate the effects of labelId.
+          example: true
+    Goal:
+      type: object
+      description: Defines the criteria a LineItem needs to satisfy to meet its delivery goal.
+      properties:
+        goalType:
+          description: The type of the goal for the LineItem. It defines the period over which the goal for LineItem should be reached.
+          allOf:
+          - $ref: '#/components/schemas/GoalType'
+          example: DAILY
+        unitType:
+          description: The type of the goal unit for the LineItem.
+          allOf:
+          - $ref: '#/components/schemas/UnitType'
+          example: IMPRESSIONS
+        units:
+          type: number
+          description: If this is a primary goal, it represents the number or percentage of impressions or clicks that will be reserved for the LineItem.
+          example: 100
+    GoalType:
+      type: string
+      enum:
+        - NONE
+        - LIFETIME
+        - DAILY
+        - UNKNOWN
+      example: NONE
+    UnitType:
+      type: string
+      enum:
+        - IMPRESSIONS
+        - CLICKS
+        - CLICK_THROUGH_CPA_CONVERSIONS
+        - VIEW_THROUGH_CPA_CONVERSIONS
+        - TOTAL_CPA_CONVERSIONS
+        - VIEWABLE_IMPRESSIONS
+        - IN_TARGET_IMPRESSIONS
+        - UNKNOWN
+      example: NONE
+    AdUnitTargeting:
+      type: object
+      description: Represents targeted or excluded ad units.
+      properties:
+        adUnitId:
+          description: Included or excluded ad unit id.
+          type: string
+          example: tbd
+        includeDescendants:
+          type: boolean
+          description: Whether or not all descendants are included (or excluded) as part of including (or excluding) this ad unit. By default, the value is true which means targeting this ad unit will target all of its descendants.
+          example: true
+
+    DateTime:
+      type: object
+      description: Represents a date combined with the time of day.
+      properties:
+        date:
+          $ref: '#/components/schemas/Date'
+        hour:
+          type: integer
+          example: 0
+        minute:
+          type: integer
+          example: 0
+        second:
+          type: integer
+          example: 0
+        timeZoneId:
+          type: string
+          example: America/Los_Angeles
+    Date:
+      type: object
+      description: Represents a date.
+      properties:
+        year:
+          type: integer
+          description: Year (e.g., 2009)
+          example: 2022
+        month:
+          type: integer
+          description: Month (1..12)
+          example: 2
+        day:
+          type: integer
+          description: Day (1..31)
+          example: 15
+    ReservationDetailsError.Reason:
+      type: string
+      description: The reasons for the target error.
+      enum:
+        - UNLIMITED_UNITS_BOUGHT_NOT_ALLOWED
+        - UNLIMITED_END_DATE_TIME_NOT_ALLOWED
+        - PERCENTAGE_UNITS_BOUGHT_TOO_HIGH
+        - DURATION_NOT_ALLOWED
+        - UNIT_TYPE_NOT_ALLOWED
+        - COST_TYPE_NOT_ALLOWED
+        - COST_TYPE_UNIT_TYPE_MISMATCH_NOT_ALLOWED
+        - LINE_ITEM_TYPE_NOT_ALLOWED
+        - NETWORK_REMNANT_ORDER_CANNOT_UPDATE_LINEITEM_TYPE
+        - BACKFILL_WEBPROPERTY_CODE_NOT_ALLOWED
+        - UNKNOWN
+      example: UNLIMITED_UNITS_BOUGHT_NOT_ALLOWED
+    ComputedStatus:
+      type: string
+      description: Describes the computed LineItem status that is derived from the current state of the line item.
+      enum:
+        - DELIVERY_EXTENDED
+        - DELIVERING
+        - READY
+        - PAUSED
+        - INACTIVE
+        - PAUSED_INVENTORY_RELEASED
+        - PENDING_APPROVAL
+        - COMPLETED
+        - DISAPPROVED
+        - DRAFT
+        - CANCELED
+    LineItemType:
+      type: string
+      description: LineItemType indicates the priority of a LineItem, determined by the way in which impressions are reserved to be served for it.
+      enum:
+        - SPONSORSHIP
+        - STANDARD
+        - NETWORK
+        - BULK
+        - PRICE_PRIORITY
+        - HOUSE
+        - LEGACY_DFP
+        - CLICK_TRACKING
+        - ADSENSE
+        - AD_EXCHANGE
+        - BUMPER
+        - ADMOB
+        - PREFERRED_DEAL
+        - UNKNOWN
+    Rules:
+      type: object
+      description: Rules for processing transaction
+      properties:
+        route:
+          type: object
+          description: route config
+          allOf:
+          - $ref: '#/components/schemas/Route'
+    Route:
+      type: object
+      description: route rules as binary config
+      properties:
+        toGam:
+          type: boolean
+          description: should be true if it need to be delivered to GAM
+          example: true

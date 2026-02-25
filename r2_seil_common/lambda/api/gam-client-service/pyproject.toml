@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "app"
+version = "0.1.0"
+description = "Google Ad Manager Client Service Lambda"
+authors = ["Ming Li <mingxuan.li@contino.io>"]
+
+[tool.poetry.dependencies]
+python = "~3.9"
+flask = "^2.0.2"
+requests = "^2.27.1"
+aws-xray-sdk = "^2.9.0"
+dependency-injector = "^4.38.0"
+gam-core = { path = "../../../lib/gam", develop = true }
+salesforce-bulk = "^2.2.0"
+setuptools = "^60.8.1"
+
+[tool.poetry.dev-dependencies]
+pytest = "=7.1.3"
+boto3 = "<1.26.100"
+pytest-cov = "^3.0.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

@@ -1,0 +1,602 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description:  |
+  This template deploys a VPC, with three public, three private and three restricted subnets spread
+  across three different Availability Zones. It deploys an internet gateway, with a default
+  route on the public subnets. It deploys three NAT gateways (one in each AZ),
+  and default routes for them in the private subnets. This template requires the below parameters to be
+  available in the SSM parameter store before running this stack. Refer to the docs folder for instructions.
+
+Parameters:
+  AccountPrefix:
+    Description: Account Name as Prefix
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /account/name
+
+  VpcCIDR:
+    Description: Account CIDR
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /networking/VPC/cidr
+
+  PublicSubnet1CIDR:
+    Description: Public AZ-1
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /networking/publicsubnet1/cidr
+
+  PublicSubnet2CIDR:
+    Description: Public AZ-2
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /networking/publicsubnet2/cidr
+
+  PublicSubnet3CIDR:
+    Description: Public AZ-3
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /networking/publicsubnet3/cidr
+
+  PrivateSubnet1CIDR:
+    Description: Private AZ-1
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /networking/privatesubnet1/cidr
+
+  PrivateSubnet2CIDR:
+    Description: Private AZ-2
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /networking/privatesubnet2/cidr
+
+  PrivateSubnet3CIDR:
+    Description: Private AZ-3
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /networking/privatesubnet3/cidr
+
+  RestrictedSubnet1CIDR:
+    Description: Restricted AZ-1
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /networking/restrictedsubnet1/cidr
+
+  RestrictedSubnet2CIDR:
+    Description: Restricted AZ-2
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /networking/restrictedsubnet2/cidr
+
+  RestrictedSubnet3CIDR:
+    Description: Restricted AZ-3
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /networking/restrictedsubnet3/cidr
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${AccountPrefix}-vpc
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${AccountPrefix}-igw
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      CidrBlock: !Ref PublicSubnet1CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${AccountPrefix} Public Subnet (AZ1)
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, !GetAZs  '' ]
+      CidrBlock: !Ref PublicSubnet2CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${AccountPrefix} Public Subnet (AZ2)
+
+  PublicSubnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 2, !GetAZs  '' ]
+      CidrBlock: !Ref PublicSubnet3CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${AccountPrefix} Public Subnet (AZ3)
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs  '' ]
+      CidrBlock: !Ref PrivateSubnet1CIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub ${AccountPrefix} Private Subnet (AZ1)
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, !GetAZs  '' ]
+      CidrBlock: !Ref PrivateSubnet2CIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub ${AccountPrefix} Private Subnet (AZ2)
+  
+  PrivateSubnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 2, !GetAZs  '' ]
+      CidrBlock: !Ref PrivateSubnet3CIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub ${AccountPrefix} Private Subnet (AZ3)
+
+  RestrictedSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs  '' ]
+      CidrBlock: !Ref RestrictedSubnet1CIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub ${AccountPrefix} Restricted Subnet (AZ1)
+
+  RestrictedSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, !GetAZs  '' ]
+      CidrBlock: !Ref RestrictedSubnet2CIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub ${AccountPrefix} Restricted Subnet (AZ2)
+
+  RestrictedSubnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 2, !GetAZs  '' ]
+      CidrBlock: !Ref RestrictedSubnet3CIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub ${AccountPrefix} Restricted Subnet (AZ3)
+
+  NatGateway1EIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+
+  NatGateway2EIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+
+  NatGateway3EIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+
+  NatGateway1:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGateway1EIP.AllocationId
+      SubnetId: !Ref PublicSubnet1
+      Tags:
+        - Key: Name
+          Value: !Sub ${AccountPrefix}-ngw-1
+  NatGateway2:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGateway2EIP.AllocationId
+      SubnetId: !Ref PublicSubnet2
+      Tags:
+        - Key: Name
+          Value: !Sub ${AccountPrefix}-ngw-2
+
+  NatGateway3:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGateway3EIP.AllocationId
+      SubnetId: !Ref PublicSubnet3
+      Tags:
+        - Key: Name
+          Value: !Sub ${AccountPrefix}-ngw-3
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${AccountPrefix} Public Routes
+
+  DefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet1
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet2
+
+  PublicSubnet3RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet3
+
+  PrivateRouteTable1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${AccountPrefix} Private Routes (AZ1)
+
+  DefaultPrivateRoute1:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway1
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      SubnetId: !Ref PrivateSubnet1
+
+  PrivateRouteTable2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${AccountPrefix} Private Routes (AZ2)
+
+  DefaultPrivateRoute2:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway2
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      SubnetId: !Ref PrivateSubnet2
+
+  PrivateRouteTable3:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${AccountPrefix} Private Routes (AZ3)
+
+  DefaultPrivateRoute3:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable3
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway3
+
+  PrivateSubnet3RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable3
+      SubnetId: !Ref PrivateSubnet3
+
+  RestrictedRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${AccountPrefix} Restricted Routes
+
+  RestrictedSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RestrictedRouteTable
+      SubnetId: !Ref RestrictedSubnet1
+
+  RestrictedSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RestrictedRouteTable
+      SubnetId: !Ref RestrictedSubnet2
+
+  RestrictedSubnet3RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RestrictedRouteTable
+      SubnetId: !Ref RestrictedSubnet3
+
+  NoIngressSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: "no-ingress-sg"
+      GroupDescription: "Security group with no ingress rule"
+      VpcId: !Ref VPC
+
+  DBSubnetGroup: 
+    Type: "AWS::RDS::DBSubnetGroup"
+    Properties: 
+      DBSubnetGroupName: !Sub ${AccountPrefix}-restricted-subnetGroup
+      DBSubnetGroupDescription: RDS DB Subnet Group
+      SubnetIds: 
+        - !Ref RestrictedSubnet1
+        - !Ref RestrictedSubnet2
+        - !Ref RestrictedSubnet3
+      Tags: 
+        - Key: Name
+          Value: !Sub ${AccountPrefix}-rds-subnetGroup
+
+# Output to parameter store
+  VPCIDParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /networking/vpc/id
+      Description: VPC ID
+      Type: String
+      Value: !Ref VPC
+      Tags:
+        Name: !Sub ${AccountPrefix}-vpc-id
+
+  PublicSubnetsParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /networking/publicsubnets/ids
+      Description: all 3 public subnet ids
+      Type: String
+      Value: !Join [ ",", [ !Ref PublicSubnet1, !Ref PublicSubnet2, !Ref PublicSubnet3 ]]
+      Tags:
+        Name: !Sub ${AccountPrefix}-publicsubnets-ids
+
+  PrivateSubnetsParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /networking/privatesubnets/ids
+      Description: all 3 private subnet ids
+      Type: String
+      Value: !Join [ ",", [ !Ref PrivateSubnet1, !Ref PrivateSubnet2, !Ref PrivateSubnet3 ]]
+      Tags:
+        Name: !Sub ${AccountPrefix}-privatesubnets-ids
+
+  RestrictedSubnetsParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /networking/restrictedsubnets/ids
+      Description: all 3 restricted subnet ids
+      Type: String
+      Value: !Join [ ",", [ !Ref RestrictedSubnet1, !Ref RestrictedSubnet2, !Ref RestrictedSubnet3 ]]
+      Tags:
+        Name: !Sub ${AccountPrefix}-restrictedsubnets-ids
+
+  PublicSubnet1Param:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /networking/publicsubnet1/id
+      Description: public subnet 1 id
+      Type: String
+      Value: !Ref PublicSubnet1
+      Tags:
+        Name: !Sub ${AccountPrefix}-publicsubnet1-id
+
+  PublicSubnet2Param:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /networking/publicsubnet2/id
+      Description: public subnet 2 id
+      Type: String
+      Value: !Ref PublicSubnet2
+      Tags:
+        Name: !Sub ${AccountPrefix}-publicsubnet2-id
+
+  PublicSubnet3Param:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /networking/publicsubnet3/id
+      Description: public subnet 3 id
+      Type: String
+      Value: !Ref PublicSubnet3
+      Tags:
+        Name: !Sub ${AccountPrefix}-publicsubnet3-id
+
+  PrivateSubnet1Param:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /networking/privatesubnet1/id
+      Description: private subnet 1 id
+      Type: String
+      Value: !Ref PrivateSubnet1
+      Tags:
+        Name: !Sub ${AccountPrefix}-privatesubnet1-id
+
+  PrivateSubnet2Param:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /networking/privatesubnet2/id
+      Description: private subnet 2 id
+      Type: String
+      Value: !Ref PrivateSubnet2
+      Tags:
+        Name: !Sub ${AccountPrefix}-privatesubnet2-id
+
+  PrivateSubnet3Param:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /networking/privatesubnet3/id
+      Description: private subnet 3 id
+      Type: String
+      Value: !Ref PrivateSubnet3
+      Tags:
+        Name: !Sub ${AccountPrefix}-privatesubnet3-id
+
+  RestrictedSSubnet1Param:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /networking/restrictedSubnet1/id
+      Description: restricted subnet 1 id
+      Type: String
+      Value: !Ref RestrictedSubnet1
+      Tags:
+        Name: !Sub ${AccountPrefix}-restrictedsubnet1-id
+
+  RestrictedSSubnet2Param:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /networking/restrictedSubnet2/id
+      Description: restricted subnet 2 id
+      Type: String
+      Value: !Ref RestrictedSubnet2
+      Tags:
+        Name: !Sub ${AccountPrefix}-restrictedsubnet2-id
+
+  RestrictedSSubnet3Param:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /networking/restrictedSubnet3/id
+      Description: restricted subnet 3 id
+      Type: String
+      Value: !Ref RestrictedSubnet3
+      Tags:
+        Name: !Sub ${AccountPrefix}-restrictedsubnet3-id
+
+  PrivateRouteTable1Param:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /networking/privateroutetable1/id
+      Description: private route table 1 id
+      Type: String
+      Value: !Ref PrivateRouteTable1
+      Tags:
+        Name: !Sub ${AccountPrefix}-PrivateRouteTable1-id
+
+  PrivateRouteTable2Param:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /networking/privateroutetable2/id
+      Description: private route table 2 id
+      Type: String
+      Value: !Ref PrivateRouteTable2
+      Tags:
+        Name: !Sub ${AccountPrefix}-PrivateRouteTable2-id
+
+  PrivateRouteTable3Param:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /networking/privateroutetable3/id
+      Description: private route table 3 id
+      Type: String
+      Value: !Ref PrivateRouteTable3
+      Tags:
+        Name: !Sub ${AccountPrefix}-PrivateRouteTable3-id
+
+  RDSDBSubnetGroupParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /networking/rds/subnetgroup/id
+      Description: RDS subnet group ID
+      Type: String
+      Value: !Ref DBSubnetGroup
+      Tags:
+        Name: !Sub ${AccountPrefix}-subnetgroup-id
+
+# Output to console
+Outputs:
+  VPC:
+    Description: A reference to the created VPC
+    Value: !Ref VPC
+
+  PublicSubnets:
+    Description: A list of the public subnets
+    Value: !Join [ ",", [ !Ref PublicSubnet1, !Ref PublicSubnet2, !Ref PublicSubnet3 ]]
+
+  PrivateSubnets:
+    Description: A list of the private subnets
+    Value: !Join [ ",", [ !Ref PrivateSubnet1, !Ref PrivateSubnet2, !Ref PrivateSubnet3 ]]
+
+  RestrictedSubnets:
+    Description: A list of the private subnets
+    Value: !Join [ ",", [ !Ref RestrictedSubnet1, !Ref RestrictedSubnet2, !Ref RestrictedSubnet3 ]]
+
+  PublicSubnet1:
+    Description: A reference to the public subnet in the 1st Availability Zone
+    Value: !Ref PublicSubnet1
+
+  PublicSubnet2:
+    Description: A reference to the public subnet in the 2nd Availability Zone
+    Value: !Ref PublicSubnet2
+
+  PublicSubnet3:
+    Description: A reference to the public subnet in the 3rd Availability Zone
+    Value: !Ref PublicSubnet3
+
+  PrivateSubnet1:
+    Description: A reference to the private subnet in the 1st Availability Zone
+    Value: !Ref PrivateSubnet1
+
+  PrivateSubnet2:
+    Description: A reference to the private subnet in the 2nd Availability Zone
+    Value: !Ref PrivateSubnet2
+
+  PrivateSubnet3:
+    Description: A reference to the private subnet in the 3rd Availability Zone
+    Value: !Ref PrivateSubnet3
+
+  RestrictedSubnet1:
+    Description: A reference to the private subnet in the 1st Availability Zone
+    Value: !Ref PrivateSubnet1
+
+  RestrictedSubnet2:
+    Description: A reference to the private subnet in the 2nd Availability Zone
+    Value: !Ref PrivateSubnet2
+
+  RestrictedSubnet3:
+    Description: A reference to the private subnet in the 3rd Availability Zone
+    Value: !Ref PrivateSubnet3
+
+  NoIngressSecurityGroup:
+    Description: Security group with no ingress rule
+    Value: !Ref NoIngressSecurityGroup

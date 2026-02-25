@@ -1,0 +1,48 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+  Creates user/role for Azure DevOps service connection
+
+Resources:
+  ServiceConnectionUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: CloudFormationAzdo
+
+  ServiceConnectionAccessKey:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      Serial: 1
+      Status: Active
+      UserName: !Ref ServiceConnectionUser
+
+  ServiceConnectionAccessKeySecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Ref ServiceConnectionUser
+      Description: Credentials for Azure Devops Service Connection
+      SecretString: !Sub '{"AccessKeyId":"${ServiceConnectionAccessKey}","SecretAccessKey":"${ServiceConnectionAccessKey.SecretAccessKey}"}'
+
+  CloudFormationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: CloudFormationAzureDevops
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS:
+                - !GetAtt ServiceConnectionUser.Arn
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: CloudFormationAzureDevops
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'cloudformation:*'
+                  - '*'  # TODO - Reduce permissions
+                Resource:
+                  - '*'

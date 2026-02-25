@@ -1,0 +1,78 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+  Stack for the Tech One API lambda
+
+Parameters:
+  EnvPrefix:
+    Type: String
+    Description: Environment Name as Prefix
+  LambdaVersion:
+    Type: String
+    Description: Lambda image tag
+
+Resources:
+  Lambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${EnvPrefix}-api-tech1-router-service"
+      PackageType: Image
+      MemorySize: 1024
+      Timeout: 30
+      TracingConfig:
+        Mode: Active
+      Code:
+        ImageUri: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${EnvPrefix}-api-tech1-router-service:${LambdaVersion}"
+      Environment:
+        Variables:
+          ENVIRONMENT: !Sub "${EnvPrefix}"
+          LAMBDA_REGION: !Sub "${AWS::Region}"
+          APPLICATION_NAME: !Sub "${EnvPrefix}-api-tech1-router-service"
+          ARN_TECH1_CLIENT_SERVICE: !Sub "{{resolve:ssm:/${EnvPrefix}/api/tech1-client-service/lambda-arn}}"
+      Role: !GetAtt LambdaRole.Arn
+      Tags:
+        - Key: "version"
+          Value: !Ref LambdaVersion
+
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      Policies:
+        - PolicyName: !Sub "${EnvPrefix}-api-tech1-router-service-policy"
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Effect: Allow
+                Resource:
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${EnvPrefix}-api-tech1-router-service:*"
+              - Action:
+                  - lambda:InvokeFunction
+                Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${EnvPrefix}-api-tech1-client-service*'
+              - Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
+                Effect: Allow
+                Resource: '*'
+
+  # Write the Lambda ARN to an SSM parameter, to be used by the API Gateway stack.
+  LambdaArn:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${EnvPrefix}/api/tech1-router-service/lambda-arn
+      Type: String
+      Description: The ARN of the tech1 router service lambda
+      Value: !GetAtt Lambda.Arn

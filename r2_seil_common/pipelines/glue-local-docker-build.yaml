@@ -1,0 +1,61 @@
+trigger: none
+
+parameters:
+  - name: env
+    displayName: Environment
+    type: string
+    values:
+      - dev
+  - name: version
+    displayName: Version
+    type: string
+    values:
+      - 1.0.0
+
+variables:
+  - name: serviceConnection
+    ${{ if in(parameters.env, 'dev') }}:
+      value: AwsDev
+    ${{ elseif in(parameters.env, 'uat', 'sit') }}:
+      value: AwsNonProd
+    ${{ elseif in(parameters.env, 'prod') }}:
+      value: AwsProd
+  - name: region
+    value: ap-southeast-2
+
+steps:
+  - task: Docker@2
+    name: build
+    displayName: Build Glue Local Docker Image
+    inputs:
+      command: build
+      buildContext: glue
+      Dockerfile: glue/Dockerfile
+      repository: ${{ parameters.env }}-glue-local
+      tags: ${{ parameters.version }}
+
+  - task: ECRPushImage@1
+    name: push_version
+    displayName: Push Glue Local Docker Imageto ECR with version
+    inputs:
+      awsCredentials: ${{ variables.serviceConnection }}
+      regionName: $(region)
+      imageSource: imagename
+      sourceImageName: ${{ parameters.env }}-glue-local
+      sourceImageTag: ${{ parameters.version }}
+      repositoryName: ${{ parameters.env }}-glue-local
+      pushTag: ${{ parameters.version }}
+      autoCreateRepository: false
+
+  - task: ECRPushImage@1
+    name: push_latest
+    displayName: Push Glue Local Docker Imageto ECR As latest version
+    inputs:
+      awsCredentials: ${{ variables.serviceConnection }}
+      regionName: $(region)
+      imageSource: imagename
+      sourceImageName: ${{ parameters.env }}-glue-local
+      sourceImageTag: ${{ parameters.version }}
+      repositoryName: ${{ parameters.env }}-glue-local
+      pushTag: latest
+      autoCreateRepository: false

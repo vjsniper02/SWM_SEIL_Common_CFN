@@ -1,0 +1,120 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+  Stack for the Technology One Foreign Exchange lambda
+
+Parameters:
+  EnvPrefix:
+    Type: String
+    Description: Environment Name as Prefix
+  LambdaVersion:
+    Type: String
+    Description: Lambda image tag
+
+Mappings:
+  TechOneMap:
+    apidev:
+      ApiScheme: https
+      ApiHost: seven-test.t1cloud.com
+      ApiFxPath: /T1Default/CiAnywhere/Web/SEVEN-TEST/Api/RaaS/v1/RetrieveUSDFXRATE
+      ApiCrPath: /T1Default/CiAnywhere/Web/SEVEN-TEST/Api/WS/v1/Debtor/RemainingCredit
+    sit:
+      ApiScheme: https
+      ApiHost: seven-test.t1cloud.com
+      ApiFxPath: /T1Default/CiAnywhere/Web/SEVEN-TEST/Api/RaaS/v1/RetrieveUSDFXRATE
+      ApiCrPath: /T1Default/CiAnywhere/Web/SEVEN-TEST/Api/WS/v1/Debtor/RemainingCredit
+    uat:
+      ApiScheme: https
+      ApiHost: seven-test.t1cloud.com
+      ApiFxPath: /T1Default/CiAnywhere/Web/SEVEN-TEST/Api/RaaS/v1/RetrieveUSDFXRATE
+      ApiCrPath: /T1Default/CiAnywhere/Web/SEVEN-TEST/Api/WS/v1/Debtor/RemainingCredit
+    prod:
+      # FIXME - Double check the prod host before go-live
+      ApiScheme: https
+      ApiHost: seven-test.t1cloud.com
+      ApiFxPath: /T1Default/CiAnywhere/Web/SEVEN-TEST/Api/RaaS/v1/RetrieveUSDFXRATE
+      ApiCrPath: /T1Default/CiAnywhere/Web/SEVEN-TEST/Api/WS/v1/Debtor/RemainingCredit
+
+Resources:
+  Lambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${EnvPrefix}-api-tech1-client-service"
+      PackageType: Image
+      MemorySize: 1024
+      Timeout: 30
+      TracingConfig:
+        Mode: Active
+      Code:
+        ImageUri: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${EnvPrefix}-api-tech1-client-service:${LambdaVersion}"
+      Environment:
+        Variables:
+          ENVIRONMENT: !Sub "${EnvPrefix}"
+          T1_API_SCHEME: !FindInMap
+            - TechOneMap
+            - !Ref EnvPrefix
+            - ApiScheme
+          T1_API_HOST: !FindInMap
+            - TechOneMap
+            - !Ref EnvPrefix
+            - ApiHost
+          T1_API_FX_PATH: !FindInMap
+            - TechOneMap
+            - !Ref EnvPrefix
+            - ApiFxPath
+          T1_API_DEBTOR_CREDITLIMIT_PATH: !FindInMap
+            - TechOneMap
+            - !Ref EnvPrefix
+            - ApiCrPath
+      Role: !GetAtt LambdaRole.Arn
+      Tags:
+        - Key: "version"
+          Value: !Ref LambdaVersion
+
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      Policies:
+        - PolicyName: !Sub "${EnvPrefix}TechOneFXApiFunc"
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Effect: Allow
+                Resource:
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${EnvPrefix}-api-tech1-client-service:*"
+              - Action:
+                  - secretsmanager:GetSecretValue
+                Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${EnvPrefix}/tech1/*'
+              - Action:
+                  - ssm:GetParameter
+                Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${EnvPrefix}/*'
+              - Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
+                Effect: Allow
+                Resource: '*'
+
+  # Write the Lambda ARN to an SSM parameter, to be used by the API Gateway stack.
+  LambdaArn:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${EnvPrefix}/api/tech1-client-service/lambda-arn
+      Type: String
+      Description: The ARN of the Technology One Foreign Exchange service lambda
+      Value: !GetAtt Lambda.Arn

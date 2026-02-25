@@ -1,0 +1,252 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: |
+  Creates an API backed by a dummy Lambda function. Creates an API authorizer to protect the API from anonymous access.
+  To test authorization with cognito-idp, see commands from this article: https://bobbyhadz.com/blog/aws-cdk-api-authorizer#testing-the-cognito-jwt-authorizer
+  OAuth is enabled. See https://docs.aws.amazon.com/cognito/latest/developerguide/token-endpoint.html
+
+Parameters:
+  EnvPrefix:
+    Type: String
+    Description: Environment Name as Prefix
+    Default: dev
+
+Resources:
+  MyRestApi:
+    Type: 'AWS::ApiGateway::RestApi'
+    Properties:
+      Description: A test API
+      Name: MyRestAPI
+
+  ApiMethod:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      AuthorizationScopes:
+      - !Sub ${EnvPrefix}-test-oauth-rs/get
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref ApiAuthorizer
+      # 403 is handled by the authorizer. Other response codes need to be added as required e.g. 400, 404, 500
+      MethodResponses:
+        - StatusCode: 200
+      RestApiId: !Ref MyRestApi
+      ResourceId: !GetAtt MyRestApi.RootResourceId
+      HttpMethod: GET
+      Integration:
+        Credentials: !GetAtt ApiRole.Arn
+        # IntegrationHttpMethod must be POST: https://aws.amazon.com/premiumsupport/knowledge-center/api-gateway-lambda-template-invoke-error/
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${Lambda.Arn}/invocations
+
+  Stage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      RestApiId: !Ref MyRestApi
+      DeploymentId: !Ref Deployment
+      MethodSettings:
+        - ResourcePath: /
+          HttpMethod: GET
+
+  Deployment:
+    Type: 'AWS::ApiGateway::Deployment'
+    DependsOn: ApiMethod
+    Properties:
+      RestApiId: !Ref MyRestApi
+      Description: My deployment
+
+  LambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt Lambda.Arn
+      Principal: apigateway.amazonaws.com
+      # SourceArn: "String" # TODO: tighten permission?
+
+  ApiAuthorizer:
+    Type: AWS::ApiGateway::Authorizer
+    Properties:
+      IdentitySource: method.request.header.Authorization
+      Name: TestApiAuthorizer # TODO: rename
+      ProviderARNs:
+        - !GetAtt UserPool.Arn
+      RestApiId: !Ref MyRestApi
+      Type: COGNITO_USER_POOLS
+
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UsernameAttributes:
+        - email
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    DependsOn: UserPoolResourceServer
+    Properties:
+      AllowedOAuthFlows:
+      - client_credentials
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthScopes:
+      # UserPoolResourceServer.Identifier/ScopeName
+      - !Sub ${EnvPrefix}-test-oauth-rs/get
+      - !Sub ${EnvPrefix}-test-oauth-rs/post
+      CallbackURLs:
+      - !Sub https://${UserPoolDomain}.auth.${AWS::Region}.amazoncognito.com/oauth2/callback
+      ExplicitAuthFlows:
+      - ALLOW_REFRESH_TOKEN_AUTH
+      - ALLOW_USER_PASSWORD_AUTH
+      GenerateSecret: true
+      SupportedIdentityProviders:
+      - COGNITO
+      UserPoolId: !Ref UserPool
+
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Sub ${EnvPrefix}-test-oauth
+      UserPoolId: !Ref UserPool
+
+  UserPoolResourceServer:
+    Type: AWS::Cognito::UserPoolResourceServer
+    Properties:
+      Identifier: !Sub ${EnvPrefix}-test-oauth-rs
+      Name: !Sub ${EnvPrefix}-resource-server
+      # Dummy scopes for now
+      Scopes:
+      - ScopeDescription: GET scope
+        ScopeName: get
+      - ScopeDescription: POST scope
+        ScopeName: post
+      UserPoolId: !Ref UserPool
+
+  ApiRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - apigateway.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: 'lambda:InvokeFunction'
+                Resource: '*'
+
+  # This is an IAM Role required for API Gateway service to push logs to CW. This Role should be moved to an independent IAM Role stack or something similar.
+  # Unfortunately, since this is a global API Gateway setting, it does not appear to be configurable via CFN.
+  # Uncomment to create this Role to be used for debugging API Gateway (to turn on Logs/Tracing for a Stage)
+  # ApigatewayCWRole:
+  #   Type: AWS::IAM::Role
+  #   Properties:
+  #     AssumeRolePolicyDocument:
+  #       Statement:
+  #         - Action:
+  #           - sts:AssumeRole
+  #           Effect: Allow
+  #           Principal:
+  #             Service:
+  #             - apigateway.amazonaws.com
+  #       Version: 2012-10-17
+  #     ManagedPolicyArns:
+  #       - arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs
+
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+            - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+              - lambda.amazonaws.com
+        Version: 2012-10-17
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSLambdaExecute
+
+  # This is a dummy Lamdda function to facilitate testing
+  Lambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        ZipFile: |
+          exports.handler = function(event, context) {
+            console.log("REQUEST RECEIVED:\n" + JSON.stringify(event))
+            let response = {
+              statusCode: 200,
+              body: JSON.stringify(event),
+              headers: {
+                'Content-Type': 'application/json',
+              }
+            };
+            context.succeed(response);
+          }
+      Handler: index.handler
+      Role: !GetAtt LambdaRole.Arn
+      Runtime: nodejs14.x
+
+  # WAF
+  WafWebAcl:
+    Type: AWS::WAFv2::WebACL
+    Properties:
+      DefaultAction:
+        Allow: {}
+      Description: "Test WAF WebACL"
+      # Name: "String" # TODO: name?
+      Rules:
+        - Name: AWSManagedRulesCommonRule # TODO: rename?
+          OverrideAction:
+            None: {}
+          Priority: 0
+          Statement:
+            ManagedRuleGroupStatement:
+              Name: AWSManagedRulesCommonRuleSet
+              VendorName: AWS
+          VisibilityConfig:
+            CloudWatchMetricsEnabled: false
+            MetricName: "FooBar" # Placeholder; CW is disabled for now so this is sort of irrelevant
+            SampledRequestsEnabled: false
+        - Name: AWSManagedRulesKnownBadInputsRule # TODO: rename?
+          OverrideAction:
+            None: {}
+          Priority: 10
+          Statement:
+            ManagedRuleGroupStatement:
+              Name: AWSManagedRulesKnownBadInputsRuleSet
+              VendorName: AWS
+          VisibilityConfig:
+            CloudWatchMetricsEnabled: false
+            MetricName: "FooBar" # Placeholder; CW is disabled for now so this is sort of irrelevant
+            SampledRequestsEnabled: false
+      Scope: REGIONAL
+      VisibilityConfig:
+        CloudWatchMetricsEnabled: false
+        MetricName: "FooBar" # Placeholder; CW is disabled for now so this is sort of irrelevant
+        SampledRequestsEnabled: false
+
+  WafWebAclAssociation:
+    Type: AWS::WAFv2::WebACLAssociation
+    Properties:
+      ResourceArn: !Sub arn:aws:apigateway:${AWS::Region}::/restapis/${MyRestApi}/stages/${Stage}
+      WebACLArn: !GetAtt WafWebAcl.Arn
+
+Outputs:
+  UserPoolClientId:
+    Description: 'User Pool Client ID, for use in: aws cognito-idp --client-id'
+    Value: !Ref UserPoolClient
+
+  UserPoolId:
+    Description: 'User Pool ID, for use in: aws cognito-idp --user-pool-id'
+    Value: !Ref UserPool
+
+  ApiUrl:
+    Description: API Gateway default stage URL
+    Value: !Sub https://${MyRestApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}

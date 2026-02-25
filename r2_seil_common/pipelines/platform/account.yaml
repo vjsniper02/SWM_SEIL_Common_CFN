@@ -1,0 +1,205 @@
+trigger: none
+pool:
+  vmImage: ubuntu-20.04
+
+parameters:
+  - name: account
+    displayName: Account
+    type: string
+    values:
+      - dev
+      - nonprod
+      - prod
+  - name: networkStacks
+    type: object
+    default:
+      - vgw
+      - route53
+      - nacls
+  - name: others
+    type: object
+    default:
+      - ecr
+      - resourcePolicies
+#      - sftpServer
+  - name: costCenter
+    displayName: "Tag: Cost Center"
+    type: string
+    default: "7IT"
+    values:
+      - 7IT
+  - name: project
+    displayName: "Tag: Project"
+    type: string
+    default: "SWM Integration"
+  - name: role
+    displayName: "Tag: Role"
+    type: string
+    default: "Azure DevOps pipeline"
+  - name: repository
+    displayName: "Tag: Repository"
+    type: string
+    default: "SWM Integration"
+  - name: criticality
+    displayName: "Tag: Criticality"
+    type: string
+    default: "Critical"
+    values:
+      - Critical
+      - High
+      - Medium
+      - Low
+  - name: pii
+    displayName: "Tag: PII"
+    type: string
+    default: "no"
+    values:
+      - yes
+      - no
+  - name: securityClassification
+    displayName: "Tag: Security Classification"
+    type: string
+    default: "Critical"
+    values:
+      - Critical
+      - High
+      - Medium
+      - Low
+
+variables:
+  - name: serviceConnection
+    ${{ if eq(parameters.account, 'dev') }}:
+      value: AwsDev
+    ${{ elseif eq(parameters.account, 'nonprod') }}:
+      value: AwsNonProd
+    ${{ elseif eq(parameters.account, 'prod') }}:
+      value: AwsProd
+  - name: region
+    value: ap-southeast-2
+
+stages:
+  - stage: networking
+    displayName: Networking
+    jobs:
+      - job: vpcSubnets
+        steps:
+          - task: CloudFormationCreateOrUpdateStack@1
+            inputs:
+              awsCredentials: ${{ variables.serviceConnection }}
+              regionName: ${{ variables.region }}
+              stackName: ${{ parameters.account }}-vpcSubnets
+              capabilityIAM: true
+              capabilityNamedIAM: true
+              capabilityAutoExpand: true
+              templateFile: cfn/templates/platform/account-vpcSubnets.yaml
+              tags: |
+                CostCenter=${{ parameters.costCenter }}
+                Environment=${{ parameters.account }}
+                IACReleaseNumber=$(Build.SourceVersion)
+                LastUpdatedBy=$(Build.QueuedBy)
+                Project=${{ parameters.project }}
+                Role=${{ parameters.role }}
+                Repository=${{ parameters.repository }}
+                Criticality=${{ parameters.criticality }}
+                PII=${{ parameters.pii }}
+                SecurityClassification=${{ parameters.securityClassification }}
+      - ${{ each stack in parameters.networkStacks }}:
+          - job: ${{ stack }}
+            dependsOn: vpcSubnets
+            steps:
+              - task: CloudFormationCreateOrUpdateStack@1
+                inputs:
+                  awsCredentials: ${{ variables.serviceConnection }}
+                  regionName: ${{ variables.region }}
+                  stackName: ${{ parameters.account }}-${{ stack }}
+                  capabilityIAM: true
+                  capabilityNamedIAM: true
+                  capabilityAutoExpand: true
+                  templateFile: cfn/templates/platform/account-${{ stack }}.yaml
+                  tags: |
+                    CostCenter=${{ parameters.costCenter }}
+                    Environment=${{ parameters.account }}
+                    IACReleaseNumber=$(Build.SourceVersion)
+                    LastUpdatedBy=$(Build.QueuedBy)
+                    Project=${{ parameters.project }}
+                    Role=${{ parameters.role }}
+                    Repository=${{ parameters.repository }}
+                    Criticality=${{ parameters.criticality }}
+                    PII=${{ parameters.pii }}
+                    SecurityClassification=${{ parameters.securityClassification }}
+
+  - stage: other
+    displayName: Other resources
+    jobs:
+      - ${{ each stack in parameters.others }}:
+          - job: ${{ stack }}
+            steps:
+              - task: CloudFormationCreateOrUpdateStack@1
+                inputs:
+                  awsCredentials: ${{ variables.serviceConnection }}
+                  regionName: ${{ variables.region }}
+                  stackName: ${{ parameters.account }}-${{ stack }}
+                  capabilityIAM: true
+                  capabilityNamedIAM: true
+                  capabilityAutoExpand: true
+                  templateFile: cfn/templates/platform/account-${{ stack }}.yaml
+                  tags: |
+                    CostCenter=${{ parameters.costCenter }}
+                    Environment=${{ parameters.account }}
+                    IACReleaseNumber=$(Build.SourceVersion)
+                    LastUpdatedBy=$(Build.QueuedBy)
+                    Project=${{ parameters.project }}
+                    Role=${{ parameters.role }}
+                    Repository=${{ parameters.repository }}
+                    Criticality=${{ parameters.criticality }}
+                    PII=${{ parameters.pii }}
+                    SecurityClassification=${{ parameters.securityClassification }}
+
+  - stage: appflow
+    displayName: Appflow utility functions
+    jobs:
+      - template: ../templates/lambda-build.yaml
+        parameters:
+          jobName: activateFlowsLambda
+          lambda: utilities/activateflows
+          env: ${{ parameters.account }}
+          serviceConnection: ${{ variables.serviceConnection }}
+      - template: ../templates/lambda-build.yaml
+        parameters:
+          jobName: appflowMultiplyLambda
+          lambda: utilities/appflowmultiply
+          env: ${{ parameters.account }}
+          serviceConnection: ${{ variables.serviceConnection }}
+      - job: deployLambdas
+        displayName: Deploy Lambdas
+        dependsOn: [ activateFlowsLambda, appflowMultiplyLambda ]
+        variables:
+          activateFlowsVersion: $[ dependencies.activateFlowsLambda.outputs['outputVersion.lambdaVersion'] ]
+          appflowMultiplyVersion: $[ dependencies.appflowMultiplyLambda.outputs['outputVersion.lambdaVersion'] ]
+        steps:
+          - task: CloudFormationCreateOrUpdateStack@1
+            inputs:
+              awsCredentials: ${{ variables.serviceConnection }}
+              regionName: ${{ variables.region }}
+              stackName: ${{ parameters.account }}-appflow-utilities
+              capabilityIAM: true
+              capabilityNamedIAM: true
+              capabilityAutoExpand: true
+              templateFile: cfn/templates/platform/account-appflow-utilities.yaml
+              templateParametersSource: inline
+              templateParameters: |
+                - ParameterKey: MacroLambdaTag
+                  ParameterValue: "$(appflowMultiplyVersion)"
+                - ParameterKey: CrLambdaTag
+                  ParameterValue: "$(activateFlowsVersion)"
+              tags: |
+                CostCenter=${{ parameters.costCenter }}
+                Environment=${{ parameters.account }}
+                IACReleaseNumber=$(Build.SourceVersion)
+                LastUpdatedBy=$(Build.QueuedBy)
+                Project=${{ parameters.project }}
+                Role=${{ parameters.role }}
+                Repository=${{ parameters.repository }}
+                Criticality=${{ parameters.criticality }}
+                PII=${{ parameters.pii }}
+                SecurityClassification=${{ parameters.securityClassification }}

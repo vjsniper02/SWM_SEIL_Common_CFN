@@ -1,0 +1,91 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+# Bucket to test Salesforce integration, NOT production ready
+
+Parameters:
+  EnvPrefix:
+    Type: String
+    Description: Environment Name as Prefix
+
+Resources:
+  SalesforceS3Key:
+    Type: AWS::KMS::Key
+    Properties:
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'kms:*'
+            Resource: '*'
+
+  SalesforceS3KeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub alias/${EnvPrefix}-salesforce
+      TargetKeyId: !Ref SalesforceS3Key
+
+  SalesforceS3:
+    Type: 'AWS::S3::Bucket'
+    DeletionPolicy: Delete
+    Properties:
+      BucketName: !Sub '{{resolve:ssm:ProjPrefix}}-${EnvPrefix}-salesforce'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: 'aws:kms'
+            KMSMasterKeyID: !Sub arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${EnvPrefix}-salesforce
+          BucketKeyEnabled: true
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: TRUE
+        BlockPublicPolicy: TRUE
+        IgnorePublicAcls: TRUE
+        RestrictPublicBuckets: TRUE
+
+  SalesforceS3User:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: !Sub ${EnvPrefix}SalesforceS3User
+
+  SalesforceS3UserAccessKey:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      Serial: 1
+      Status: Active
+      UserName: !Ref SalesforceS3User
+
+  SalesforceS3UserAccessKeySecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Ref SalesforceS3User
+      Description: Credentials for SalesforceS3User
+      SecretString: !Sub '{"AccessKeyId":"${SalesforceS3UserAccessKey}","SecretAccessKey":"${SalesforceS3UserAccessKey.SecretAccessKey}"}'
+
+  SalesforceS3Policy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ${EnvPrefix}-SalesforceS3Testing
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action:
+              - "s3:*"
+            Effect: Allow
+            Resource:
+              - !Sub "arn:aws:s3:::${SalesforceS3}"
+              - !Sub "arn:aws:s3:::${SalesforceS3}/*"
+          - Action:
+              - "s3:ListAllMyBuckets"
+              - "s3:GetBucketLocation"
+            Effect: Allow
+            Resource: "arn:aws:s3:::*"
+          - Action:
+              - kms:Decrypt
+              - kms:Encrypt
+              - kms:GenerateDataKey
+            Effect: Allow
+            Resource: !GetAtt SalesforceS3Key.Arn
+      Users:
+        - !Ref SalesforceS3User

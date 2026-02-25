@@ -1,0 +1,42 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: This stack creates an SFTP server for an account
+
+Parameters:
+  AccountPrefix:
+    Description: Account Name as Prefix
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /account/name
+
+Resources:
+  SftpServer:
+    Type: AWS::Transfer::Server
+    Properties:
+      Domain: S3
+      LoggingRole: !GetAtt SftpToCWRole.Arn
+      Protocols:
+      - SFTP
+
+  SftpToCWRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - transfer.amazonaws.com
+        Version: 2012-10-17
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+
+Outputs:
+  SftpServerEndpoint:
+    Value: !Sub ${SftpServer.ServerId}.server.transfer.${AWS::Region}.amazonaws.com
+
+  SftpServerId:
+    Value: !GetAtt SftpServer.ServerId
+    Export:
+      Name: !Sub ${AccountPrefix}-sftp-server-id

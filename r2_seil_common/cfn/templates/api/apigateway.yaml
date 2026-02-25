@@ -1,0 +1,327 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: |
+  Creates an API gateway. Creates an API authorizer to protect the API from anonymous access.
+  The authorizer is backed by a Cognito user pool and supports client credential OAuth flow.
+  The API gateway accesses the Lambda through an internal ALB integration via a VPC link.
+  The ALB listener is on Port 443 with a certificate from the ACM, issued to a private hosted zone record.
+  A WAF WebACL is associated with the ALB.
+
+Parameters:
+  AccountPrefix:
+    Description: Account Name as Prefix
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /account/name
+  EnvPrefix:
+    Type: String
+    Description: Environment Name as Prefix
+    Default: dev
+  ProjPrefix:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: resource prfix, swmi
+    Default: ProjPrefix
+  ApiName:
+    Type: String
+    Default: api
+  ApiDns:
+    Type: String
+    Default: swmi-dev.com
+  ApiVersion:
+    Type: String
+    Default: v1
+  CodeBucket:
+    Type: String
+    Description: S3 bucket name
+    Default: swmi-dev-sourcecode
+  ApiSpecKey:
+    Type: String
+    Description: S3 key of the API spec file
+    Default: openapi-specs/openapi-oas30.yaml
+
+Resources:
+  Api:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Body:
+        'Fn::Transform':
+          Name: 'AWS::Include'
+          Parameters:
+            Location: !Sub 's3://${CodeBucket}/${ApiSpecKey}'
+
+  Stage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref Api
+      AutoDeploy: true
+      StageName: !Ref ApiVersion
+
+  UserPool:
+    Type: AWS::Cognito::UserPool
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    DependsOn: UserPoolResourceServer
+    Properties:
+      AllowedOAuthFlows:
+      - client_credentials
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthScopes:
+      # UserPoolResourceServer.Identifier/ScopeName
+      - !Sub ${ProjPrefix}-${EnvPrefix}-oauth-rs/get
+      - !Sub ${ProjPrefix}-${EnvPrefix}-oauth-rs/post
+      ClientName: !Sub ${EnvPrefix}-${ApiName}-userpoolclient
+      ExplicitAuthFlows:
+      - ALLOW_REFRESH_TOKEN_AUTH
+      GenerateSecret: true
+      SupportedIdentityProviders:
+      - COGNITO
+      UserPoolId: !Ref UserPool
+
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Sub ${ProjPrefix}-${EnvPrefix}-oauth
+      UserPoolId: !Ref UserPool
+
+  UserPoolResourceServer:
+    Type: AWS::Cognito::UserPoolResourceServer
+    Properties:
+      Identifier: !Sub ${ProjPrefix}-${EnvPrefix}-oauth-rs
+      Name: !Sub ${ProjPrefix}-${EnvPrefix}-resource-server
+      Scopes:
+      - ScopeDescription: GET scope
+        ScopeName: get
+      - ScopeDescription: POST scope
+        ScopeName: post
+      UserPoolId: !Ref UserPool
+
+  Alb:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub ${EnvPrefix}-${ApiName}-ALB
+      Scheme: internal
+      SecurityGroups:
+      - !GetAtt AlbSg.GroupId
+      Subnets:
+      - "{{resolve:ssm:/networking/privatesubnet1/id}}"
+      - "{{resolve:ssm:/networking/privatesubnet2/id}}"
+      - "{{resolve:ssm:/networking/privatesubnet3/id}}"
+      Type: application
+
+  AlbSg:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow ingress on Port 443 from VPC link
+      GroupName: !Sub ${EnvPrefix}-apigateway-alb-sg
+      SecurityGroupIngress:
+      - FromPort: 443
+        IpProtocol: tcp
+        SourceSecurityGroupId: !GetAtt VpcLinkSg.GroupId
+        ToPort: 443
+      VpcId: "{{resolve:ssm:/networking/vpc/id}}"
+
+  VpcLink:
+    Type: AWS::ApiGatewayV2::VpcLink
+    Properties:
+      Name: !Sub ${EnvPrefix}-apigateway-vpclink
+      SecurityGroupIds:
+      - !GetAtt VpcLinkSg.GroupId
+      SubnetIds:
+      - "{{resolve:ssm:/networking/privatesubnet1/id}}"
+      - "{{resolve:ssm:/networking/privatesubnet2/id}}"
+      - "{{resolve:ssm:/networking/privatesubnet3/id}}"
+
+  VpcLinkSg:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Does not need ingress rule to work
+      GroupName: !Sub ${EnvPrefix}-apigateway-vpclink-sg
+      VpcId: "{{resolve:ssm:/networking/vpc/id}}"
+
+  AlbListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      Certificates:
+      - CertificateArn: !Ref AlbCert
+      DefaultActions:
+      - FixedResponseConfig:
+          ContentType: text/plain
+          MessageBody: The request did not match any API path
+          StatusCode: 404
+        Type: fixed-response
+      LoadBalancerArn: !Ref Alb
+      Port: 443
+      Protocol: HTTPS
+      SslPolicy: ELBSecurityPolicy-FS-1-2-Res-2020-10
+
+  AlbR53DnsRecordSetGroup:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneId: "{{resolve:ssm:/networking/route53/id}}"
+      RecordSets:
+      - AliasTarget:
+          DNSName: !GetAtt Alb.DNSName
+          EvaluateTargetHealth: false
+          HostedZoneId: !GetAtt Alb.CanonicalHostedZoneID
+        Name: !Sub "${EnvPrefix}-api.{{resolve:ssm:/networking/route53/zonename}}"
+        Type: A
+
+  TechOneListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+      - TargetGroupArn: !Ref TechOneLambdaTg
+        Type: forward
+      Conditions:
+      - Field: path-pattern
+        Values:
+        - !Sub /${ApiVersion}/techone
+        - !Sub /${ApiVersion}/techone/*
+      ListenerArn: !Ref AlbListener
+      Priority: 8
+
+  TechOneLambdaTg:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    DependsOn: TechOneAlbLambdaInvokePermission
+    Properties:
+      Name: !Sub ${EnvPrefix}-techone-tg
+      Targets:
+      - Id: !Sub "{{resolve:ssm:/${EnvPrefix}/api/tech1-router-service/lambda-arn}}"
+      TargetType: lambda
+
+  TechOneAlbLambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Sub "{{resolve:ssm:/${EnvPrefix}/api/tech1-router-service/lambda-arn}}"
+      Principal: elasticloadbalancing.amazonaws.com
+      # Hardcode the Lambda TG Arn to avoid circular dependency between this Permission and TechOneLambdaTg
+      SourceArn: !Sub arn:aws:elasticloadbalancing:${AWS::Region}:${AWS::AccountId}:targetgroup/${EnvPrefix}-techone-tg/*
+
+  GamListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+      - TargetGroupArn: !Ref GamLambdaTg
+        Type: forward
+      Conditions:
+      - Field: path-pattern
+        Values:
+        - !Sub /${ApiVersion}/gam/*
+      ListenerArn: !Ref AlbListener
+      Priority: 10
+
+  GamLambdaTg:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    DependsOn: TechOneAlbLambdaInvokePermission
+    Properties:
+      Name: !Sub ${EnvPrefix}-gam-tg
+      Targets:
+      - Id: !Sub "{{resolve:ssm:/${EnvPrefix}/api/gam-router-service/lambda-arn}}"
+      TargetType: lambda
+
+  GamAlbLambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Sub "{{resolve:ssm:/${EnvPrefix}/api/gam-router-service/lambda-arn}}"
+      Principal: elasticloadbalancing.amazonaws.com
+      # Hardcode the Lambda TG Arn to avoid circular dependency between this Permission and GamLambdaTg
+      SourceArn: !Sub arn:aws:elasticloadbalancing:${AWS::Region}:${AWS::AccountId}:targetgroup/${EnvPrefix}-gam-tg/*
+
+  AlbCert:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Sub "${EnvPrefix}-api.{{resolve:ssm:/networking/route53/zonename}}"
+      DomainValidationOptions:
+      - DomainName: !Sub "${EnvPrefix}-api.{{resolve:ssm:/networking/route53/zonename}}"
+        HostedZoneId: "{{resolve:ssm:/networking/route53/id}}"
+      ValidationMethod: DNS
+
+  # WAF
+  WafWebAcl:
+    Type: AWS::WAFv2::WebACL
+    Properties:
+      DefaultAction:
+        Allow: {}
+      Description: "Forecast API WAF WebACL"
+      # Name: "String" # TODO: name?
+      Rules:
+        - Name: AWSCustomRuleRequestBodyLimit
+          Priority: 0
+          Statement:
+            SizeConstraintStatement:
+              FieldToMatch:
+                Body:
+                  OversizeHandling: CONTINUE
+              ComparisonOperator: GT
+              Size: 46000
+              TextTransformations:
+              - Priority: 0
+                Type: COMPRESS_WHITE_SPACE
+          Action:
+            Block: {}
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: awsCustomRuleRequestBodyLimit
+        - Name: AWSManagedRulesCommonRule # TODO: rename?
+          OverrideAction:
+            None: {}
+          Priority: 1
+          Statement:
+            ManagedRuleGroupStatement:
+              Name: AWSManagedRulesCommonRuleSet
+              VendorName: AWS
+              RuleActionOverrides:
+              - Name: SizeRestrictions_BODY
+                ActionToUse:
+                  Allow: {}
+          VisibilityConfig:
+            CloudWatchMetricsEnabled: false
+            MetricName: "FooBar" # Placeholder; CW is disabled for now so this is sort of irrelevant
+            SampledRequestsEnabled: false
+        - Name: AWSManagedRulesKnownBadInputsRule # TODO: rename?
+          OverrideAction:
+            None: {}
+          Priority: 10
+          Statement:
+            ManagedRuleGroupStatement:
+              Name: AWSManagedRulesKnownBadInputsRuleSet
+              VendorName: AWS
+          VisibilityConfig:
+            CloudWatchMetricsEnabled: false
+            MetricName: "FooBar" # Placeholder; CW is disabled for now so this is sort of irrelevant
+            SampledRequestsEnabled: false
+      Scope: REGIONAL
+      VisibilityConfig:
+        CloudWatchMetricsEnabled: false
+        MetricName: "FooBar" # Placeholder; CW is disabled for now so this is sort of irrelevant
+        SampledRequestsEnabled: false
+
+  WafWebAclAssociation:
+    Type: AWS::WAFv2::WebACLAssociation
+    Properties:
+      ResourceArn: !Ref Alb
+      WebACLArn: !GetAtt WafWebAcl.Arn
+
+Outputs:
+  UserPoolId:
+    Description: User Pool ID
+    Value: !Ref UserPool
+
+  UserPoolClientId:
+    Description: User Pool Client ID
+    Value: !Ref UserPoolClient
+
+  CmdGetUserPoolClientSecret:
+    Description: AWS CLI command to get the User Pool Client Secret
+    Value: !Sub aws cognito-idp describe-user-pool-client --region ${AWS::Region} --user-pool-id ${UserPool} --client-id ${UserPoolClient} --query UserPoolClient.ClientSecret --output text
+
+  ApiBaseUrl:
+    Description: API Gateway base URL
+    Value: !GetAtt Api.ApiEndpoint
+
+  AccessTokenUrl:
+    Description: URL to get access token
+    Value: !Sub https://${UserPoolDomain}.auth.${AWS::Region}.amazoncognito.com/oauth2/token

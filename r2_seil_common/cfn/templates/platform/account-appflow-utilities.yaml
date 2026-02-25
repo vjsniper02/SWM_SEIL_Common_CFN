@@ -1,0 +1,95 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: |
+  This stack creates a Cloudformation Macro to multiply AppFlow Flow resources,
+  and a Lambda function to automatically activate/deactivate the Flows.
+
+Parameters:
+  AccountPrefix:
+    Description: Account Name as Prefix
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /account/name
+
+  MacroLambdaTag:
+    Description: This is the version tag of the ECR image for the Macro Lambda
+    Type: String
+
+  CrLambdaTag:
+    Description: This is the version tag of the ECR image for the CR Lambda
+    Type: String
+
+Resources:
+  AppFlowMacro:
+    Type: AWS::CloudFormation::Macro
+    Properties:
+      Description: Multiplies AWS::AppFlow::Flow resources in a template
+      FunctionName: !GetAtt MacroLambda.Arn
+      LogRoleARN: !GetAtt LogRole.Arn
+      Name: AppFlowMultiply
+
+  MacroLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        ImageUri: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${AccountPrefix}-utilities-appflowmultiply:${MacroLambdaTag}
+      PackageType: Image
+      Role: !GetAtt LambdaRole.Arn
+      Timeout: 180 # 3 min to allow cold start
+
+  LogRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - transfer.amazonaws.com
+        Version: 2012-10-17
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+
+  # Lambda function for the activate/deactivate flows custom resource
+  CrLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        ImageUri: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${AccountPrefix}-utilities-activateflows:${CrLambdaTag}
+      PackageType: Image
+      Role: !GetAtt LambdaRole.Arn
+      Timeout: 180 # 3 min to allow cold start
+
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+        Version: 2012-10-17
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/AWSLambdaExecute
+      Policies:
+      - PolicyName: allow-activate-deactivate-flow
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action:
+            - appflow:StartFlow
+            - appflow:StopFlow
+            Resource: '*'
+
+  # Write the CrLambda Arn to an SSM parameter, to be used by the AppFlow stack
+  LambdaArn:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${AccountPrefix}/cfn-cr-lambda/activateflows
+      Type: String
+      Value: !GetAtt CrLambda.Arn

@@ -1,0 +1,165 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description:  |
+  This template creates parameters in the SSM 
+  parameter store for the non-prod account
+
+Resources:
+  AccountPrefixParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /account/name
+      Description: Name of account. eg. dev, nonprod, prod.
+      Type: String
+      Value: nonprod
+      Tags:
+        Name: name of account parameter
+
+  VPCCIDRParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /networking/VPC/cidr
+      Description: cidr range for whole VPC
+      Type: String
+      Value: 10.80.128.0/20
+      Tags:
+        Name: VPC cidr range
+
+  PublicSummarisedCIDRParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /networking/VPC/publiccidr
+      Description: cidr range for public subnets
+      Type: String
+      Value: 10.80.140.0/22
+      Tags:
+        Name: Public cidr range
+
+  PrivateSummarisedCIDRParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /networking/VPC/privatecidr
+      Description: cidr range for private subnets
+      Type: String
+      Value: 10.80.128.0/21
+      Tags:
+        Name: Private cidr range
+
+  RestrictedSummarisedCIDRParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /networking/VPC/restrictedcidr
+      Description: cidr range for restricted subnets
+      Type: String
+      Value: 10.80.136.0/22
+      Tags:
+        Name: Restricted cidr range
+
+  PrivateSubnet1CIDRParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /networking/privatesubnet1/cidr
+      Description: cidr range for private subnet 1
+      Type: String
+      Value: 10.80.128.0/23
+      Tags:
+        Name: Private Subnet 1 cidr
+
+  PrivateSubnet2CIDRParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /networking/privatesubnet2/cidr
+      Description: cidr range for private subnet 2
+      Type: String
+      Value: 10.80.130.0/23
+      Tags:
+        Name: Private Subnet 2 cidr
+
+  PrivateSubnet3CIDRParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /networking/privatesubnet3/cidr
+      Description: cidr range for private subnet 3
+      Type: String
+      Value: 10.80.132.0/23
+      Tags:
+        Name: Private Subnet 3 cidr
+
+  PublicSubnet1CIDRParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /networking/publicsubnet1/cidr
+      Description: cidr range for public subnet 1
+      Type: String
+      Value: 10.80.140.0/24
+      Tags:
+        Name: Public Subnet 1 cidr
+
+  PublicSubnet2CIDRParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /networking/publicsubnet2/cidr
+      Description: cidr range for public subnet 2
+      Type: String
+      Value: 10.80.141.0/24
+      Tags:
+        Name: Public Subnet 2 cidr
+
+  PublicSubnet3CIDRParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /networking/publicsubnet3/cidr
+      Description: cidr range for public subnet 3
+      Type: String
+      Value: 10.80.142.0/24
+      Tags:
+        Name: Public Subnet 3 cidr
+
+  RestrictedSubnet1CIDRParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /networking/restrictedsubnet1/cidr
+      Description: cidr range for restricted subnet 1
+      Type: String
+      Value: 10.80.136.0/24
+      Tags:
+        Name: Restricted Subnet 1 cidr
+
+  RestrictedSubnet2CIDRParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /networking/restrictedsubnet2/cidr
+      Description: cidr range for restricted subnet 2
+      Type: String
+      Value: 10.80.137.0/24
+      Tags:
+        Name: Restricted Subnet 2 cidr
+
+  RestrictedSubnet3CIDRParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /networking/restrictedsubnet3/cidr
+      Description: cidr range for restricted subnet 3
+      Type: String
+      Value: 10.80.138.0/24
+      Tags:
+        Name: Restricted Subnet 3 cidr
+
+  DomainSuffixParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /networking/route53/zonename
+      Description: public route53 dns suffix
+      Type: String
+      Value: test.code7swm.com.au
+      Tags:
+        Name: Route53 DNS zone suffix
+  
+  VGWAsn:
+    Type: AWS::SSM::Parameter 
+    Properties:
+      Name: /networking/virtualgateway/asn
+      Description: The private autonomous system number (ASN) for the BGP session
+      Type: String
+      Value: 7224
+      Tags:
+        Name: VGW ASN

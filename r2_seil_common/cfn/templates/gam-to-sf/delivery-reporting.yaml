@@ -1,0 +1,176 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+  Stack for the GAM to Salesforce Service lambda
+
+Parameters:
+  EnvPrefix:
+    Type: String
+    Description: Environment Name as Prefix
+  LambdaVersion:
+    Type: String
+    Description: Lambda image tag
+
+Resources:
+  Lambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${EnvPrefix}-gam-to-sf-delivery-reporting"
+      PackageType: Image
+      MemorySize: 1024
+      Timeout: 600
+      TracingConfig:
+        Mode: Active
+      Code:
+        ImageUri: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${EnvPrefix}-gam-to-sf-delivery-reporting:${LambdaVersion}"
+      Environment:
+        Variables:
+          ENVIRONMENT: !Sub "${EnvPrefix}"
+          GAM_APPLICATION_NAME: !Sub "${EnvPrefix}-gam-to-sf-delivery-reporting"
+          GAM_ACCOUNT_AWS_SECRET_NAME: !Sub "${EnvPrefix}/gam/service_account_key"
+          GAM_MOCK_AWS_PARAM_NAME: !Sub "/${EnvPrefix}/gam/use-mock-gam-client"
+      Role: !GetAtt LambdaRole.Arn
+      Tags:
+        - Key: "version"
+          Value: !Ref LambdaVersion
+
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      Policies:
+        - PolicyName: !Sub "${EnvPrefix}DeliveryReportingApiFunc"
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Effect: Allow
+                Resource:
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${EnvPrefix}-gam-to-sf-delivery-reporting:*"
+              - Action:
+                  - secretsmanager:GetSecretValue
+                Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${EnvPrefix}/tech1/*'
+                  - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${EnvPrefix}/sf/*'
+              - Action:
+                  - ssm:GetParameter
+                Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${EnvPrefix}/*'
+              - Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
+                Effect: Allow
+                Resource: '*'
+
+  LambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt Lambda.Arn
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt DeliveryReportingLambdaInvocationRule.Arn
+
+  # Write the Lambda ARN to an SSM parameter, to be used by the API Gateway stack.
+  LambdaArn:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${EnvPrefix}/gam-to-sf/delivery-reporting/lambda-arn
+      Type: String
+      Description: The ARN of the GAM to Salesforce Service lambda
+      Value: !GetAtt Lambda.Arn
+
+  DeliveryReportingScheduledRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Trigger GAM to Salesforce Sync Trigger Rule
+      EventBusName: default
+      Name: !Sub ${EnvPrefix}-gam-to-sf-delivery-reporting-schedule-trigger
+      ScheduleExpression: rate(1 hour)
+      Targets:
+        - Arn: !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/${EnvPrefix}-gam-to-sf-delivery-reporting'
+          RoleArn: !GetAtt DeliveryReportingEventbusTargetRole.Arn
+          Id: !Sub ${EnvPrefix}-gam-to-sf-delivery-reporting-eventbus
+
+  DeliveryReportingEventbusLogRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Trigger GAM to Salesforce Sync Events Log Rule
+      EventBusName: !Sub ${EnvPrefix}-gam-to-sf-delivery-reporting
+      EventPattern: '{"source": [{"exists": true}]}'
+      Name: !Sub ${EnvPrefix}-gam-to-sf-delivery-reporting-log-rule
+      Targets:
+        - Arn: !GetAtt DeliveryReportingEventbusLogGroup.Arn
+          Id: !Sub ${EnvPrefix}-gam-to-sf-delivery-reporting-eventbus-log
+
+  DeliveryReportingLambdaInvocationRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Trigger GAM to Salesforce Sync Events Lambda Invocation Rule
+      EventBusName: !Sub ${EnvPrefix}-gam-to-sf-delivery-reporting
+      EventPattern: '{"source": [{"exists": true}]}'
+      Name: !Sub ${EnvPrefix}-gam-to-sf-delivery-reporting-invoke-lambda-rule
+      Targets:
+        - Arn: !GetAtt Lambda.Arn
+          Id: !Sub ${EnvPrefix}-gam-to-sf-delivery-reporting-eventbus-lambda-invocation
+          DeadLetterConfig:
+            Arn: !GetAtt DeliveryReportingDLQueue.Arn
+          RetryPolicy:
+            MaximumEventAgeInSeconds: 60
+            MaximumRetryAttempts: 4
+
+  DeliveryReportingEventbusTargetRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - events.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: AllowDeliveryReportingEventbusAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: 'events:PutEvents'
+                Resource: !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/${EnvPrefix}-gam-to-sf-delivery-reporting'
+
+  DeliveryReportingEventbusLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/events/${EnvPrefix}-gam-to-sf-delivery-reporting
+
+  DeliveryReportingDLQueue:
+    Type: AWS::SQS::Queue
+
+  DeliveryReportingDLQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref DeliveryReportingDLQueue
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action: 'sqs:SendMessage'
+            Resource: !GetAtt DeliveryReportingDLQueue.Arn
+            Principal:
+              Service: events.amazonaws.com
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !GetAtt DeliveryReportingLambdaInvocationRule.Arn

@@ -1,0 +1,26 @@
+ARG fnName="app"
+
+FROM python:3.9 AS builder
+ARG fnName
+ARG extra_params
+RUN pip install poetry==1.1.12 tox==3.24.5
+WORKDIR /build
+COPY ${fnName}/ /build/${fnName}
+COPY tests/ /build/tests
+COPY pyproject.toml  tox.ini /build/
+
+# Disabling hashes till a workaround for setuptools not generating a hash is found
+# RUN poetry update && poetry export -f requirements.txt --without-hashes > requirements.txt && \
+#     poetry export -f requirements.txt --dev > dev-requirements.txt
+
+# # Test
+# RUN tox
+
+# FROM public.ecr.aws/lambda/python:3.9 AS release
+# FROM ubuntu:latest
+# ARG fnName
+# ARG extra_params
+# COPY --from=builder /build/app ${LAMBDA_TASK_ROOT}/app
+# COPY --from=builder /build/requirements.txt ${LAMBDA_TASK_ROOT}/requirements.txt
+# RUN pip3 install -r requirements.txt -t "${LAMBDA_TASK_ROOT}"
+# CMD [ "app.handler" ]

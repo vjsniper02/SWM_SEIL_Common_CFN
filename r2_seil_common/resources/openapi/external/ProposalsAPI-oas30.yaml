@@ -1,0 +1,837 @@
+openapi: "3.0.1"
+info:
+  title: Proposals-API
+  description: >-
+
+    # Introduction
+
+
+    <table><tbody><tr><td class = 'into_api' style='border:none;padding:0 0 0
+    0'><p>The purpose of this API is to process proposals</p></td></tr></tbody></table>
+
+
+    # Features
+
+
+    Proposals API provides the below features.
+
+    1. Create Proposals
+
+    2. Approve Proposals
+
+    # Getting Access to the API
+
+    1. Reach out to TBD to get access to this API.
+
+
+    Now head over to **Getting Started** where you can find more details about
+    the API.
+
+
+    # Getting Started
+
+
+    Below are the steps to invoke this API.
+      1. Generate authorizer token.
+      2. Use retreived token within expiry window in header for all call to this API
+
+
+    # Frequently Asked Questions
+
+
+    **Q: How can i get support for this API?**
+
+
+    A. TBD
+  version: 1.0.0
+servers:
+- url: "https://tbd/{basePath}"
+  variables:
+    basePath:
+      default: "v1"
+  description: API dev
+paths:
+  /proposal:
+    post:
+      tags:
+        - Proposal API
+      summary: Create Proposal
+      description: |
+        Create programmatic guaranteed proposal
+      parameters:
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          description: All responses from the service contain an X-Correlation-Id header containing a unique GUID per request. If the request contains an X-Correlation-Id HTTP Header the service will use this value, otherwise it will generate a new correlation id. The correlation id is a GUID in 8-4-4-12 format.
+          schema:
+            type: string
+        - name: X-Application-Label
+          in: header
+          required: false
+          description: Application label to uniquely identify source system
+          schema:
+            type: string
+      requestBody:
+        description: create proposal request
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProposalRequest'
+      security:
+      - API-CustomAuthoriser: []
+      responses:
+        '200':
+          description: successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateProposalResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse400'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+        '404':
+          description: Not Foound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+        '500':
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse500'
+        default:
+          description: any error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseDefault'
+  /proposal/{proposalid}:
+    put:
+      tags:
+        - Proposals API
+      summary: Update proposal
+      description: Update the programmatic guaranteed proposal 
+      parameters:
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          description: All responses from the service contain an X-Correlation-Id header containing a unique GUID per request. If the request contains an X-Correlation-Id HTTP Header the service will use this value, otherwise it will generate a new correlation id. The correlation id is a GUID in 8-4-4-12 format.
+          schema:
+            type: string
+        - name: X-Application-Label
+          in: header
+          required: false
+          description: Application label to uniquely identify source system
+          schema:
+            type: string
+        - name: proposalid
+          in: path
+          required: true
+          description: Proposal Id
+          schema:
+            type: number
+        - name: toGam
+          in: query
+          required: true
+          description: For now default route to GAM only
+          example: true
+          schema:
+            type: boolean
+      requestBody:
+        description: update proposal request
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProposalRequest'
+      security:
+      - API-CustomAuthoriser: []
+      responses:
+        '200':
+          description: successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateProposalResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+        '404':
+          description: Not Foound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+        '500':
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse500'
+        default:
+          description: any error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseDefault'
+    get:
+      tags:
+        - Proposals API
+      summary: Get proposals
+      description: |
+        Get proposals by statement
+      parameters:
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          description: All responses from the service contain an X-Correlation-Id header containing a unique GUID per request. If the request contains an X-Correlation-Id HTTP Header the service will use this value, otherwise it will generate a new correlation id. The correlation id is a GUID in 8-4-4-12 format.
+          schema:
+            type: string
+        - name: X-Application-Label
+          in: header
+          required: false
+          description: Application label to uniquely identify source system
+          schema:
+            type: string
+        - name: proposalid
+          in: path
+          required: true
+          description: Proposal Id
+          schema:
+            type: number
+        - name: toGam
+          in: query
+          required: true
+          description: For now default route to GAM only
+          example: true
+          schema:
+            type: boolean
+      security:
+      - API-CustomAuthoriser: []
+      responses:
+        '200':
+          description: successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetProposalsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+        '404':
+          description: Not Foound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+        '500':
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse500'
+        default:
+          description: any error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseDefault'
+components:
+  securitySchemes:
+    API-CustomAuthoriser:
+      type: "apiKey"
+      name: "Authorization"
+      in: "header"
+      x-amazon-apigateway-authtype: "custom"
+  schemas:
+    ServiceResponse:
+      type: object
+      properties:
+        applicationLabel:
+          type: string
+          description: api consumer name mapped from request header parameter
+          example: salesforce
+        time:
+          type: string
+          description: response time sent by api/microservice
+          example: 2021-10-04T10:54:24.792+1000
+        correlationId:
+          type: string
+          description: correlation id sent in request from header
+          example: f8443d84-3cce-4b56-8a8e-328fe77158a7
+    ErrorResponse500:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+          description: Mandatory. Http Code
+          example: 500
+        applicationLabel:
+          type: string
+          description: Mandatory. Application label of consuming application
+          example: salesforce
+        time:
+          type: string
+          format: date-time
+          description: Mandatory. The date and time when the message was received by recipient.
+          example: '2021-10-04T10:54:24.792+1000'
+        correlationId:
+          type: string
+          description: Mandatory. Correlation id of the message received
+          example: f8443d84-3cce-4b56-8a8e-328fe77158a7
+        message:
+          type: string
+          description: Optional. failure/exception short message
+          example: Internal server error
+        status:
+          type: string
+          description: Optional. application error code in case of successful response.
+          example: EC001
+        errors:
+          type: array
+          description: Optional.
+          items:
+            $ref: '#/components/schemas/ErrorsObject'
+    ErrorsObject:
+      type: object
+      properties:
+        code:
+          type: string
+          example: "DS501"
+        message:
+          type: string
+          example: Downstream not available
+    ErrorResponse404:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: http code
+          example: 404
+        message:
+          type: string
+          description: Optional.
+          example: Not Found
+        status:
+          type: string
+          description: Optional.
+          example: 404000
+    ErrorResponse400:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: Mandatory, http code
+          example: 400
+        message:
+          type: string
+          description: Optional. failure/exception short message
+          example: Bad Request
+        status:
+          type: string
+          description: Optional. application error code in case of successful response.
+          example: 400301
+        errors:
+          type: array
+          description: Optional.
+          items:
+            $ref: '#/components/schemas/ReservationDetailsError'
+    ReservationDetailsError:
+      type: object
+      properties:
+        code:
+          $ref: '#/components/schemas/ReservationDetailsError.Reason'
+        message:
+          type: string
+          example: TBD
+    ErrorResponse401:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Unauthorised
+    ErrorResponse403:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Forbidden
+    ErrorResponseDefault:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+          description: Mandatory. Http Code
+          example: 500
+        message:
+          type: string
+          example: Internal server error
+    DateTime:
+      type: object
+      description: Represents a date combined with the time of day.
+      properties:
+        date:
+          $ref: '#/components/schemas/Date'
+        hour:
+          type: integer
+          example: 0
+        minute:
+          type: integer
+          example: 0
+        second:
+          type: integer
+          example: 0
+        timeZoneId:
+          type: string
+          example: America/Los_Angeles
+    Date:
+      type: object
+      description: Represents a date.
+      properties:
+        year:
+          type: integer
+          description: Year (e.g., 2009)
+          example: 2022
+        month:
+          type: integer
+          description: Month (1..12)
+          example: 2
+        day:
+          type: integer
+          description: Day (1..31)
+          example: 15
+    ReservationDetailsError.Reason:
+      type: string
+      description: The reasons for the target error.
+      enum:
+        - UNLIMITED_UNITS_BOUGHT_NOT_ALLOWED
+        - UNLIMITED_END_DATE_TIME_NOT_ALLOWED
+        - PERCENTAGE_UNITS_BOUGHT_TOO_HIGH
+        - DURATION_NOT_ALLOWED
+        - UNIT_TYPE_NOT_ALLOWED
+        - COST_TYPE_NOT_ALLOWED
+        - COST_TYPE_UNIT_TYPE_MISMATCH_NOT_ALLOWED
+        - LINE_ITEM_TYPE_NOT_ALLOWED
+        - NETWORK_REMNANT_ORDER_CANNOT_UPDATE_LINEITEM_TYPE
+        - BACKFILL_WEBPROPERTY_CODE_NOT_ALLOWED
+        - UNKNOWN
+      example: UNLIMITED_UNITS_BOUGHT_NOT_ALLOWED
+    CreateProposalRequest:
+        type: object
+        properties:
+          orders:
+            type: array
+            description: Mandatory, the proposal to create. only one element expected at this stage
+            items:
+              $ref: '#/components/schemas/ProposalRequest'
+    CreateProposalResponse:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: http code
+          example: 200
+        message:
+          type: string
+          description: Optional.
+          example: success
+        status:
+          type: string
+          description: Optional.
+          example: 200000
+        data:
+          $ref: '#/components/schemas/ProposalResponse'
+    UpdateProposalRequest:
+      type: object
+      properties:
+        orders:
+          type: array
+          description: Mandatory, the proposal to update. only one element expected at this stage
+          items:
+            $ref: '#/components/schemas/ProposalRequest'
+    UpdateProposalResponse:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: http code
+          example: 200
+        message:
+          type: string
+          description: Optional.
+          example: success
+        status:
+          type: string
+          description: Optional.
+          example: 200000
+        data:
+          $ref: '#/components/schemas/ProposalResponseData'
+    GetProposalsResponse:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/ServiceResponse'
+      properties:
+        code:
+          type: integer
+          description: http code
+          example: 200
+        message:
+          type: string
+          description: Optional.
+          example: success
+        status:
+          type: string
+          description: Optional.
+          example: 200000
+        data:
+          $ref: '#/components/schemas/ProposalResponseData'
+    ProposalRequest:
+      type: object
+      description: An Proposal represents a grouping of individual LineItem objects, each of which fulfill an ad request from a particular advertiser.
+      properties:
+        name:
+          type: string
+          description: Mandatory, The name of the Proposal. This value is required to create an proposal.
+          example: TOrder111
+        startDateTime:
+          description: The date and time at which the order and line items associated with the Proposal are eligible to begin serving.
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+        endDateTime:
+          description: The date and time at which the order and line items associated with the Proposal stop being served.
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+        advertiser:
+          description: The advertiser, to which this Proposal belongs, and a set of Contact objects associated with the advertiser.
+          allOf:
+            - $ref: '#/components/schemas/ProposalCompanyAssociation'
+        agencies:
+          type: array
+          items:
+            allOf:
+            - $ref: '#/components/schemas/ProposalCompanyAssociation'
+          description: The advertiser, to which this Proposal belongs, and a set of Contact objects associated with the advertiser.
+        internalNotes:
+          type: string
+          description: Optional, Provides any additional notes that may annotate the Proposal.
+        primarySalesperson:
+          description: The primary salesperson who brokered the transaction with the advertiser.
+          allOf:
+            - $ref: '#/components/schemas/SalespersonSplit'
+        salesPlannerIds:
+          type: array
+          items:
+            allOf:
+            - $ref: '#/components/schemas/SalespersonSplit'
+          description: List of unique IDs of User objects who are the sales planners of the Proposal.
+        primaryTraffickerId:
+          type: integer
+          description: The unique ID of the User who is primary trafficker and is responsible for trafficking the Proposal.
+        sellerContactIds:
+          type: array
+          items:
+            type: integer
+          description: users who are the seller's contacts.
+        appliedTeamIds:
+          type: array
+          items:
+            type: integer
+          description: The IDs of all teams that the Proposal is on directly.
+        appliedLabels:
+          type: array
+          items:
+            allOf:
+            - $ref: '#/components/schemas/AppliedLabel'
+          description: The set of labels applied directly to the Proposal. This attribute is optional.
+        effectiveAppliedLabels:
+          type: array
+          items:
+            allOf:
+            - $ref: '#/components/schemas/AppliedLabel'
+          description: Contains the set of labels applied directly to the proposal as well as those inherited ones.
+        currencyCode:
+          type: string
+          description: The currency code of this Proposal. This attribute is optional and defaults to network's currency code.
+          example: AUD
+        marketplaceInfo:
+          description: The marketplace info of this proposal if it has a corresponding order in Marketplace.
+          allOf:
+            - $ref: '#/components/schemas/ProposalMarketplaceInfo'
+        buyerRfp:
+          description: The buyer RFP associated with this Proposal, which is optional. This field will be null if the proposal is not initiated from RFP.
+          allOf:
+            - $ref: '#/components/schemas/BuyerRfp'
+        hasBuyerRfp:
+          type: boolean
+          description: Whether a Proposal contains a BuyerRfp field. If this field is true, it indicates that the Proposal in question orignated from a buyer.
+        deliveryPausingEnabled:
+          type: boolean
+          description: Whether pausing is consented for the Proposal. This field is optional and defaults to true.
+    ProposalResponse:
+      type: object
+      properties:
+        orders:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProposalResponseData'
+          description: list of Proposals
+    ProposalResponseData:
+      type: object
+      properties:properties:
+        name:
+          type: string
+          description: Mandatory, The name of the Proposal. This value is required to create an proposal.
+          example: TOrder111
+        startDateTime:
+          description: The date and time at which the order and line items associated with the Proposal are eligible to begin serving.
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+        endDateTime:
+          description: The date and time at which the order and line items associated with the Proposal stop being served.
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+        status:
+          allOf:
+            - $ref: '#/components/schemas/ProposalStatus'
+          description: The status of the Proposal. This attribute is read-only.
+        isArchived:
+          type: boolean
+          description: The archival status of the Proposal. This attribute is read-only.
+        advertiser:
+          description: The advertiser, to which this Proposal belongs, and a set of Contact objects associated with the advertiser.
+          allOf:
+            - $ref: '#/components/schemas/ProposalCompanyAssociation'
+        agencies:
+          type: array
+          items:
+            allOf:
+            - $ref: '#/components/schemas/ProposalCompanyAssociation'
+          description: The advertiser, to which this Proposal belongs, and a set of Contact objects associated with the advertiser.
+        internalNotes:
+          type: string
+          description: Optional, Provides any additional notes that may annotate the Proposal.
+        primarySalesperson:
+          description: The primary salesperson who brokered the transaction with the advertiser.
+          allOf:
+            - $ref: '#/components/schemas/SalespersonSplit'
+        salesPlannerIds:
+          type: array
+          items:
+            allOf:
+            - $ref: '#/components/schemas/SalespersonSplit'
+          description: List of unique IDs of User objects who are the sales planners of the Proposal.
+        primaryTraffickerId:
+          type: integer
+          description: The unique ID of the User who is primary trafficker and is responsible for trafficking the Proposal.
+        sellerContactIds:
+          type: array
+          items:
+            type: integer
+          description: users who are the seller's contacts.
+        appliedTeamIds:
+          type: array
+          items:
+            type: integer
+          description: The IDs of all teams that the Proposal is on directly.
+        appliedLabels:
+          type: array
+          items:
+            allOf:
+            - $ref: '#/components/schemas/AppliedLabel'
+          description: The set of labels applied directly to the Proposal. This attribute is optional.
+        effectiveAppliedLabels:
+          type: array
+          items:
+            allOf:
+            - $ref: '#/components/schemas/AppliedLabel'
+          description: Contains the set of labels applied directly to the proposal as well as those inherited ones.
+        currencyCode:
+          type: string
+          description: The currency code of this Proposal. This attribute is optional and defaults to network's currency code.
+          example: AUD
+        marketplaceInfo:
+          description: The marketplace info of this proposal if it has a corresponding order in Marketplace.
+          allOf:
+            - $ref: '#/components/schemas/ProposalMarketplaceInfo'
+        buyerRfp:
+          description: The buyer RFP associated with this Proposal, which is optional. This field will be null if the proposal is not initiated from RFP.
+          allOf:
+            - $ref: '#/components/schemas/BuyerRfp'
+        hasBuyerRfp:
+          type: boolean
+          description: Whether a Proposal contains a BuyerRfp field. If this field is true, it indicates that the Proposal in question orignated from a buyer.
+        deliveryPausingEnabled:
+          type: boolean
+          description: Whether pausing is consented for the Proposal. This field is optional and defaults to true.
+    ProposalCompanyAssociation: 
+      type: object
+      description: A ProposalCompanyAssociation represents a Company associated with the Proposal and a set of Contact objects belonging to the company.
+      properties:
+        companyId:
+          type: integer
+          description: The unique ID of the Company associated with the Proposal.
+        type:
+          description: The association type of the Company and Proposal.
+          allOf:
+            - $ref: '#/components/schemas/ProposalCompanyAssociationType'
+        contactIds:
+          type: array
+          items:
+            type: integer
+          description: List of unique IDs for Contact objects of the Company.
+    SalespersonSplit:
+      type: object
+      description: A SalespersonSplit represents a salesperson.
+      properties:
+        userId:
+          type: integer
+          description: The unique ID of the User responsible for the sales of the Proposal.
+    AppliedLabel:
+      type: object
+      description: Represents a Label that can be applied to an entity.
+      properties:
+        labelId:
+          type: integer
+          description: The ID of a created Label.
+        isNegated:
+          type: boolean
+          description: isNegated should be set to true to negate the effects of labelId.
+    ProposalMarketplaceInfo:
+      type: object
+      description: Marketplace info for a proposal with a corresponding order in Marketplace.
+      properties:
+        hasLocalVersionEdits:
+          type: boolean
+          description: Whether the non-free-editable fields of a Proposal are opened for edit.
+        negotiationStatus:
+          allOf:
+            - $ref: '#/components/schemas/NegotiationStatus'
+          description: The negotiation status of the Proposal. This attribute is read-only.
+        marketplaceComment:
+          type: string
+          description: The comment on the Proposal to be sent to the buyer.
+        isNewVersionFromBuyer:
+          type: boolean
+          description: Indicates that the buyer has made updates to the proposal on Marketplace.
+        buyerAccountId:
+          type: integer
+          description: The Authorized Buyers ID of the buyer that this Proposal is being negotiated with.
+        partnerClientId:
+          type: string
+          description: The ID used to represent Display & Video 360 client buyer partner ID (if Display & Video 360) or Authorized Buyers client buyer account ID.
+    BuyerRfp:
+      type: object
+      description: Represents a Label that can be applied to an entity.
+      properties:
+        costPerUnit:
+          allOf:
+            - $ref: '#/components/schemas/LineItemType'
+          description: CPM for the Proposal in question. This attribute is read-only.
+        units:
+          type: integer
+          description: The number of impressions per day that a buyer wishes to see in the Proposal derived from the request for proposal in question. This attribute is read-only.
+        budget:
+          allOf:
+            - $ref: '#/components/schemas/LineItemType'
+          description: Total amount of Money available to spend on this deal. This attribute is read-only.
+        currencyCode:
+          type: string
+          description: Currency code for this deal's budget and CPM. This attribute is read-only.
+        startDateTime:
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+          description: The DateTime in which the proposed deal should start serving. This attribute is read-only.
+        endDateTime:
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+          description: The DateTime in which the proposed deal should end serving. This attribute is read-only.
+        description:
+          type: string
+          description: A description of the proposed deal.
+        rfpType:
+          type: integer
+          description: Deal type; either Programmatic Guaranteed or Preferred Deal. This field corresponds to the type of Proposal that a buyer wishes to negotiate with a seller. This attribute is read-only.
+    ProposalCompanyAssociationType:
+      type: string
+      enum:
+        - PRIMARY_AGENCY
+        - BILLING_AGENCY
+        - BRANDING_AGENCY
+        - OTHER_AGENCY
+        - ADVERTISER
+        - UNKNOW
+      example: PRIMARY_AGENCY
+    NegotiationStatus:
+      type: string
+      enum:
+        - SELLER_INITIATED
+        - BUYER_INITIATED
+        - AWAITING_SELLER_REVIEW
+        - AWAITING_BUYER_REVIEW
+        - ONLY_SELLER_ACCEPTED
+        - FINALIZED
+        - CANCELLED
+        - UNKNOW
+      example: SELLER_INITIATED
+    RfpType:
+      type: string
+      enum:
+        - PROGRAMMATIC_GUARANTEED
+        - PREFERRED_DEAL
+        - UNKNOW
+      example: SELLER_INITIATED
+    ProposalStatus:
+      type: string
+      enum:
+        - DRAFT
+        - PENDING_APPROVAL
+        - APPROVED
+        - REJECTED
+        - UNKNOW
+      example: DRAFT
